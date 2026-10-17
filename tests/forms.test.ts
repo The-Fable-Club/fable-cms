@@ -92,8 +92,12 @@ describe("parseMemberForm", () => {
     expect(parseMemberForm(member({ year_mode: "none", year: "x" })).ok && true).toBe(true);
     const none = parseMemberForm(member({ year_mode: "none", year: "x" }));
     expect(none.ok && none.row.year).toBe("");
-    const bad = parseMemberForm(member({ year_mode: "text", year: "" }));
-    expect(!bad.ok && bad.errors.year).toBeTruthy();
+    const bad = parseMemberForm(member({ year_mode: "text", year: "ignored", year_text: "" }));
+    expect(!bad.ok && bad.errors.year_text).toBeTruthy();
+    const typed = parseMemberForm(member({ year_mode: "text", year: "ignored", year_text: "Final year" }));
+    expect(typed.ok && typed.row.year).toBe("Final year");
+    const picked = parseMemberForm(member({ year_mode: "pick", year: "3rd", year_text: "ignored" }));
+    expect(picked.ok && picked.row.year).toBe("3rd");
   });
   it("validates links and email", () => {
     const r = parseMemberForm(member({ linkedin: "linkedin.com/in/a" }));

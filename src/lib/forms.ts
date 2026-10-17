@@ -26,7 +26,7 @@ const EVENT_FIELD: Record<string, string> = {
   "time.text": "time_text", "venue.text": "venue", "seats.text": "seats", "apply.url": "apply_url",
 };
 const MEMBER_FIELD: Record<string, string> = {
-  "year.text": "year", "links.email": "email", "links.linkedin": "linkedin", "links.github": "github",
+  "year.text": "year_text", "links.email": "email", "links.linkedin": "linkedin", "links.github": "github",
 };
 
 function collect(issues: { path: PropertyKey[]; message: string }[], map: Record<string, string>): FormErrors {
@@ -101,7 +101,7 @@ export function parseMemberForm(f: FormData, supabaseUrl = "https://x.supabase.c
     position: Number(str(f, "position") || 100),
     department: str(f, "department"),
     year_mode,
-    year: year_mode === "none" ? "" : str(f, "year"),
+    year: year_mode === "pick" ? str(f, "year") : year_mode === "text" ? str(f, "year_text") : "",
     bio: String(f.get("bio") ?? "").trim(),
     focus: str(f, "focus").split(",").map((s) => s.trim()).filter(Boolean),
     email: str(f, "email"),
