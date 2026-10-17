@@ -38,8 +38,14 @@ describe("parseEventForm", () => {
     expect(r.row).toMatchObject({ start_date: null, date_month: "2027-02", time_text: "", venue: "", seats: null, apply_url: null });
   });
   it("keeps a typed date with an optional month", () => {
-    const r = parseEventForm(event({ date_mode: "text", date_text: "Early February", date_month: "2027-02" }));
+    const r = parseEventForm(event({ date_mode: "text", date_text: "Early February", date_month: "1999-01", date_month_text: "2027-02" }));
     expect(r.ok && r.row).toMatchObject({ date_text: "Early February", date_month: "2027-02" });
+  });
+  it("uses the venue box that belongs to the chosen mode", () => {
+    const online = parseEventForm(event({ venue_mode: "online", venue: "stale text", venue_online: "Google Meet" }));
+    expect(online.ok && online.row.venue).toBe("Google Meet");
+    const empty = parseEventForm(event({ venue_mode: "online", venue: "stale text" }));
+    expect(empty.ok && empty.row.venue).toBe("");
   });
   it("points each problem at its form field", () => {
     const bad = (o: Record<string, string>) => {
