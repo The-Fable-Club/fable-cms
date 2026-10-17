@@ -60,7 +60,7 @@ if (process.argv.includes("--remove")) {
 } else {
   await rest("events?on_conflict=slug", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(events) });
   await rest("members?on_conflict=slug", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(members) });
-  const [evRows, memRows] = await Promise.all([rest("events?select=*&slug=like.placeholder-*"), rest("members?select=*&slug=like.placeholder-*")]);
+  const [evRows, memRows] = await Promise.all([rest("events?select=*"), rest("members?select=*")]);
   const built = buildSnapshot({ events: evRows as EventRow[], members: memRows as MemberRow[] }, { supabaseUrl: URL });
   if (!built.ok) { console.error(built.problems); process.exit(1); }
   mkdirSync(dirname(SITE_SEED), { recursive: true });
