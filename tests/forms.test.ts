@@ -32,14 +32,29 @@ describe("parseEventForm", () => {
     expect(r.row.description).toBe("One.\n\nTwo.");
   });
   it("clears fields that do not belong to the chosen mode", () => {
-    const r = parseEventForm(event({ date_mode: "month", date_month: "2027-02", start_date: "2026-11-20", time_mode: "tba", time_text: "junk", venue_mode: "tba", venue: "junk", seats_mode: "open", seats: "junk", apply_mode: "soon", apply_url: "https://x.example" }));
+    const r = parseEventForm(event({ date_mode: "tba", date_place_tba: "2027-02-10", start_date: "2026-11-20", date_text: "junk", end_date: "2026-12-01", time_mode: "tba", time_text: "junk", venue_mode: "tba", venue: "junk", seats_mode: "open", seats: "junk", apply_mode: "soon", apply_url: "https://x.example" }));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.row).toMatchObject({ start_date: null, date_month: "2027-02", time_text: "", venue: "", seats: null, apply_url: null });
+    // the exact start date typed earlier is ignored; only the placeholder place is kept
+    expect(r.row).toMatchObject({ start_date: "2027-02-10", end_date: null, date_text: null, date_month: null, time_text: "", venue: "", seats: null, apply_url: null });
   });
-  it("keeps a typed date with an optional month", () => {
-    const r = parseEventForm(event({ date_mode: "text", date_text: "Early February", date_month: "1999-01", date_month_text: "2027-02" }));
-    expect(r.ok && r.row).toMatchObject({ date_text: "Early February", date_month: "2027-02" });
+  it("keeps a typed date with an optional placeholder place", () => {
+    const r = parseEventForm(event({ date_mode: "text", date_text: "Early February", date_place_text: "2027-02-05", date_place_tba: "1999-01-01" }));
+    expect(r.ok && r.row).toMatchObject({ date_text: "Early February", start_date: "2027-02-05", date_month: null });
+    const none = parseEventForm(event({ date_mode: "text", date_text: "After exams" }));
+    expect(none.ok && none.row.start_date).toBeNull();
+  });
+  it("a TBA event may be placed on the timeline or left unplaced, and a bad place is rejected", () => {
+    const placed = parseEventForm(event({ date_mode: "tba", date_place_tba: "2027-03-01" }));
+    expect(placed.ok && placed.row).toMatchObject({ date_mode: "tba", start_date: "2027-03-01" });
+    const unplaced = parseEventForm(event({ date_mode: "tba" }));
+    expect(unplaced.ok && unplaced.row.start_date).toBeNull();
+    const bad = parseEventForm(event({ date_mode: "tba", date_place_tba: "2027-02-30" }));
+    expect(!bad.ok && bad.errors.date_place).toBeTruthy();
+  });
+  it("no longer accepts the month-only mode", () => {
+    const r = parseEventForm(event({ date_mode: "month", date_month: "2027-02", start_date: "" }));
+    expect(r.ok).toBe(false); // read as an exact date with no start
   });
   it("uses the venue box that belongs to the chosen mode", () => {
     const online = parseEventForm(event({ venue_mode: "online", venue: "stale text", venue_online: "Google Meet" }));
@@ -55,7 +70,6 @@ describe("parseEventForm", () => {
     expect(bad({ start_date: "2026-02-30" }).start_date).toBeTruthy();
     expect(bad({ start_date: "" }).start_date).toBeTruthy();
     expect(bad({ end_date: "2026-11-19" }).end_date).toMatch(/before/);
-    expect(bad({ date_mode: "month", date_month: "" }).date_month).toBeTruthy();
     expect(bad({ date_mode: "text", date_text: "" }).date_text).toBeTruthy();
     expect(bad({ time_text: "" }).time_text).toBeTruthy();
     expect(bad({ venue: "" }).venue).toBeTruthy();

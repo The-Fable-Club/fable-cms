@@ -29,9 +29,10 @@ export function eventWindow(date: DateInfo): { start: string; end: string | null
     case "month":
       return { start: monthStart(date.month), end: monthEnd(date.month), tentative: true };
     case "text":
+      if (date.place) return { start: date.place, end: null, tentative: true };
       return date.month ? { start: monthStart(date.month), end: monthEnd(date.month), tentative: true } : null;
     case "tba":
-      return null;
+      return date.place ? { start: date.place, end: null, tentative: true } : null;
   }
 }
 
@@ -48,7 +49,7 @@ export function deriveStatus(date: DateInfo, today: string, override: EventStatu
     return "upcoming";
   }
   const w = eventWindow(date);
-  if (w && w.end && w.end < today) return "past";
+  if (w && (w.end ?? w.start) < today) return "past";
   return "upcoming";
 }
 

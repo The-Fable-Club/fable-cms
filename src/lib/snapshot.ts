@@ -90,8 +90,8 @@ export function eventCandidate(r: EventRow, supabaseUrl: string) {
       : r.date_mode === "month"
         ? { mode: "month", month: r.date_month }
         : r.date_mode === "text"
-          ? { mode: "text", text: r.date_text, month: r.date_month }
-          : { mode: "tba" };
+          ? { mode: "text", text: r.date_text, month: r.date_month, place: r.start_date }
+          : { mode: "tba", place: r.start_date };
   const time = r.time_mode === "text" ? { mode: "text", text: r.time_text } : { mode: "tba" };
   const venue =
     r.venue_mode === "text"
@@ -158,6 +158,7 @@ function startOf(e: z.infer<typeof SnapshotEvent>): string {
   const d = e.date;
   if (d.mode === "exact") return d.start;
   if (d.mode === "month") return `${d.month}-01`;
+  if ((d.mode === "text" || d.mode === "tba") && d.place) return d.place;
   if (d.mode === "text" && d.month) return `${d.month}-01`;
   return "9999-12-31";
 }

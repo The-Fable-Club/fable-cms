@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { monthLabel } from "@/lib/event-logic";
 import type { EventRow } from "@/lib/snapshot";
 import type { FormState } from "@/app/(admin)/form-state";
 import { ArtPicker, Field, ModeGroup, inputCls } from "@/components/form-bits";
@@ -23,6 +24,11 @@ const blank: Omit<EventRow, "id"> = {
 export function EventForm({ action, event, author }: Props) {
   const [state, formAction, pending] = useActionState(action, { errors: {} } as FormState);
   const e = event ?? blank;
+  // Events saved with the old "month only" option open as "write my own", with the month as the text and a placeholder place.
+  const dateStart =
+    e.date_mode === "month" && e.date_month
+      ? { mode: "text" as const, text: monthLabel(e.date_month), place: `${e.date_month}-15` }
+      : { mode: e.date_mode, text: e.date_text ?? "", place: e.start_date ?? "" };
   const err = state.errors;
   const bad = (k: string) => (err[k] ? { "aria-invalid": true as const } : {});
 
@@ -70,11 +76,10 @@ export function EventForm({ action, event, author }: Props) {
       <ModeGroup
         label="Date"
         name="date_mode"
-        initial={e.date_mode}
+        initial={dateStart.mode}
         error={err.date_mode}
         modes={[
           { value: "exact", label: "Exact date" },
-          { value: "month", label: "Month only" },
           { value: "text", label: "Write my own" },
           { value: "tba", label: "To be announced" },
         ]}
@@ -82,29 +87,28 @@ export function EventForm({ action, event, author }: Props) {
           exact: (
             <>
               <Field label="Start" error={err.start_date}>
-                <input type="date" name="start_date" defaultValue={e.start_date ?? ""} className={inputCls} {...bad("start_date")} />
+                <input type="date" name="start_date" defaultValue={dateStart.mode === "exact" ? (e.start_date ?? "") : ""} className={inputCls} {...bad("start_date")} />
               </Field>
               <Field label="End (if it runs several days)" error={err.end_date}>
                 <input type="date" name="end_date" defaultValue={e.end_date ?? ""} className={inputCls} {...bad("end_date")} />
               </Field>
             </>
           ),
-          month: (
-            <Field label="Month" hint="Shown as tentative on the timeline." error={err.date_month}>
-              <input type="month" name="date_month" defaultValue={e.date_month ?? ""} className={inputCls} {...bad("date_month")} />
-            </Field>
-          ),
           text: (
             <>
-              <Field label="Date text" hint='For example "Early February".' error={err.date_text}>
-                <input name="date_text" defaultValue={e.date_text ?? ""} maxLength={80} className={inputCls} {...bad("date_text")} />
+              <Field label="Date text" hint='Shown exactly as written, for example "Early February".' error={err.date_text}>
+                <input name="date_text" defaultValue={dateStart.text} maxLength={80} className={inputCls} {...bad("date_text")} />
               </Field>
-              <Field label="Month (optional)" hint="Places it on the timeline." error={err.date_month}>
-                <input type="month" name="date_month_text" defaultValue={e.date_month ?? ""} className={inputCls} />
+              <Field label="Place it on the timeline at (optional)" hint="A placeholder date only used to position it. It is never shown." error={err.date_place}>
+                <input type="date" name="date_place_text" defaultValue={dateStart.mode === "text" ? dateStart.place : ""} className={inputCls} />
               </Field>
             </>
           ),
-          tba: <p className="text-sm text-ink/60 sm:col-span-2">It will say &ldquo;Date to be announced&rdquo; and be listed under the timeline.</p>,
+          tba: (
+            <Field label="Place it on the timeline at (optional)" hint='A placeholder date only used to position it. It still says "Date to be announced". Leave empty to list it under the timeline instead.' error={err.date_place} className="sm:col-span-2">
+              <input type="date" name="date_place_tba" defaultValue={dateStart.mode === "tba" ? dateStart.place : ""} className={inputCls} />
+            </Field>
+          ),
         }}
       />
 

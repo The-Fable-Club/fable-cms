@@ -146,3 +146,14 @@ describe("Snapshot", () => {
     fails(Snapshot, snap({ events: [event(), event({ slug: "second", date: { mode: "exact", start: "2026-13-01" } })] }));
   });
 });
+
+describe("placeholder placement in the contract", () => {
+  it("accepts a place on TBA and own-text dates, and rejects a bad one", () => {
+    passes(DateInfo, { mode: "tba", place: "2027-02-10" });
+    passes(DateInfo, { mode: "tba", place: null });
+    passes(DateInfo, { mode: "text", text: "Early February", place: "2027-02-05" });
+    fails(DateInfo, { mode: "tba", place: "2027-02-30" });
+    fails(DateInfo, { mode: "tba", place: "soon" });
+  });
+  it("still reads the legacy month mode", () => passes(DateInfo, { mode: "month", month: "2027-02" }));
+});

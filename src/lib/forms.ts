@@ -22,7 +22,7 @@ export const slugify = (s: string) =>
 
 // zod issue path -> the form field it belongs to
 const EVENT_FIELD: Record<string, string> = {
-  "date.start": "start_date", "date.end": "end_date", "date.month": "date_month", "date.text": "date_text", date: "date_mode",
+  "date.start": "start_date", "date.end": "end_date", "date.month": "date_month", "date.text": "date_text", "date.place": "date_place", date: "date_mode",
   "time.text": "time_text", "venue.text": "venue", "seats.text": "seats", "apply.url": "apply_url",
 };
 const MEMBER_FIELD: Record<string, string> = {
@@ -42,7 +42,8 @@ function collect(issues: { path: PropertyKey[]; message: string }[], map: Record
 
 export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co"): Parsed<Omit<EventRow, "id">> {
   const title = str(f, "title");
-  const date_mode = pick(str(f, "date_mode"), ["exact", "month", "text", "tba"] as const, "exact");
+  // "month" is no longer offered; a stale form that still sends it is read as an exact date and fails the checks.
+  const date_mode = pick(str(f, "date_mode"), ["exact", "text", "tba"] as const, "exact");
   const time_mode = pick(str(f, "time_mode"), ["text", "tba"] as const, "text");
   const venue_mode = pick(str(f, "venue_mode"), ["text", "online", "tba"] as const, "text");
   const seats_mode = pick(str(f, "seats_mode"), ["text", "open", "tba"] as const, "text");
@@ -63,10 +64,10 @@ export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co
     phase: Number(str(f, "phase") || 1),
     status_override: (["active", "upcoming", "past"] as const).find((v) => v === str(f, "status_override")) ?? null,
     date_mode,
-    start_date: date_mode === "exact" ? orNull(str(f, "start_date")) : null,
+    // exact: the real start. text / tba: start_date holds the hidden placeholder date that positions it on the timeline.
+    start_date: date_mode === "exact" ? orNull(str(f, "start_date")) : orNull(str(f, date_mode === "text" ? "date_place_text" : "date_place_tba")),
     end_date: date_mode === "exact" ? orNull(str(f, "end_date")) : null,
-    // "month" and "own text" each have their own month input (both live in the page at once).
-    date_month: date_mode === "month" ? orNull(str(f, "date_month")) : date_mode === "text" ? orNull(str(f, "date_month_text")) : null,
+    date_month: null,
     date_text: date_mode === "text" ? orNull(str(f, "date_text")) : null,
     time_mode,
     time_text: time_mode === "text" ? str(f, "time_text") : "",

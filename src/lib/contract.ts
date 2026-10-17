@@ -38,8 +38,11 @@ export const DateInfo = z.discriminatedUnion("mode", [
     .object({ mode: z.literal("exact"), start: isoDate, end: isoDate.nullish() })
     .refine((d) => !d.end || d.end >= d.start, { message: "The end date is before the start date", path: ["end"] }),
   z.object({ mode: z.literal("month"), month: monthStr }),
-  z.object({ mode: z.literal("text"), text: shortText(80), month: monthStr.nullish() }),
-  z.object({ mode: z.literal("tba") }),
+  // "month" is a legacy mode: the editor no longer offers it ("text" or "tba" with a placeholder place replaces it),
+  // but old releases that contain it stay readable.
+  // `place` positions the event on the timeline without showing a date: the label stays as written / "to be announced".
+  z.object({ mode: z.literal("text"), text: shortText(80), month: monthStr.nullish(), place: isoDate.nullish() }),
+  z.object({ mode: z.literal("tba"), place: isoDate.nullish() }),
 ]);
 export type DateInfo = z.infer<typeof DateInfo>;
 

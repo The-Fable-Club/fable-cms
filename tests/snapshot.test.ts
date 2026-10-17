@@ -55,7 +55,7 @@ describe("buildSnapshot", () => {
   it("maps every placeholder mode", () => {
     const r = build([
       ev({ slug: "a", date_mode: "month", date_month: "2027-02", time_mode: "tba", venue_mode: "online", venue: "", seats_mode: "tba", apply_mode: "soon" }),
-      ev({ slug: "b", date_mode: "text", date_text: "Early March", date_month: "2027-03", apply_mode: "link", apply_url: "https://f.example/x", seats_mode: "text", seats: "40" }),
+      ev({ slug: "b", date_mode: "text", date_text: "Early March", date_month: null, start_date: "2027-03-05", apply_mode: "link", apply_url: "https://f.example/x", seats_mode: "text", seats: "40" }),
       ev({ slug: "c", date_mode: "tba", start_date: null, venue_mode: "tba", apply_mode: "none" }),
     ]);
     expect(r.ok).toBe(true);
@@ -63,9 +63,9 @@ describe("buildSnapshot", () => {
     const by = Object.fromEntries(r.snapshot.events.map((e) => [e.slug, e]));
     expect(by.a.date).toEqual({ mode: "month", month: "2027-02" });
     expect(by.a.venue.mode).toBe("online");
-    expect(by.b.date).toEqual({ mode: "text", text: "Early March", month: "2027-03" });
+    expect(by.b.date).toEqual({ mode: "text", text: "Early March", month: null, place: "2027-03-05" });
     expect(by.b.apply).toEqual({ mode: "link", url: "https://f.example/x" });
-    expect(by.c.date.mode).toBe("tba");
+    expect(by.c.date).toEqual({ mode: "tba", place: null });
   });
 
   it("sorts by date with undated events last", () => {

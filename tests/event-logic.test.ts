@@ -103,3 +103,24 @@ describe("registrationState", () => {
     expect(registrationState({ mode: "none" }, "past")).toBe("none");
   });
 });
+
+describe("placeholder placement (TBA / own text with a hidden place)", () => {
+  const tbaAt = { mode: "tba", place: "2027-02-10" } as const;
+  it("a placed TBA is positioned but still reads as to be announced", () => {
+    expect(eventWindow(tbaAt)).toEqual({ start: "2027-02-10", end: null, tentative: true });
+    expect(dateLabel(tbaAt)).toBe("Date to be announced");
+    expect(eventWindow({ mode: "tba" })).toBeNull();
+    expect(eventWindow({ mode: "tba", place: null })).toBeNull();
+  });
+  it("own text with a place keeps its text and is positioned by the place, not the legacy month", () => {
+    const d = { mode: "text", text: "Early February", place: "2027-02-05", month: "2027-03" } as const;
+    expect(eventWindow(d)).toEqual({ start: "2027-02-05", end: null, tentative: true });
+    expect(dateLabel(d)).toBe("Early February");
+  });
+  it("a placed event is upcoming until its place has passed, and never live", () => {
+    expect(deriveStatus(tbaAt, "2027-02-10", null)).toBe("upcoming");
+    expect(deriveStatus(tbaAt, "2027-02-11", null)).toBe("past");
+    expect(deriveStatus(tbaAt, "2026-10-17", null)).toBe("upcoming");
+    expect(deriveStatus(tbaAt, "2027-02-11", "upcoming")).toBe("upcoming");
+  });
+});
