@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requireCan } from "@/lib/auth";
 import { isInbox, isStatus } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 
 /** Change the status and notes of one sign-up. */
 export async function setStatusAction(form: FormData) {
-  await requireAdmin();
+  await requireCan("triage_signups");
   const table = String(form.get("table") ?? "");
   const id = Number(form.get("id"));
   const status = String(form.get("status") ?? "");

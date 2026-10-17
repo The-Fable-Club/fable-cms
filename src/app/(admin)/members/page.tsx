@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { requireCan } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { MemberRow } from "@/lib/snapshot";
 
 export const metadata = { title: "Members" };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireCan("manage_members");
   const { saved } = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("members").select("*").order("position").order("name");

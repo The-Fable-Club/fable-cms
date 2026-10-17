@@ -1,4 +1,5 @@
-import { getAdmin } from "@/lib/auth";
+import { requireCan } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { RepublishButton } from "@/components/republish-button";
 import { retryDeployAction } from "../actions";
@@ -14,11 +15,11 @@ const stateText: Record<string, string> = {
 };
 
 export default async function Releases() {
-  const admin = await getAdmin();
+  const admin = await requireCan("view_releases");
   const supabase = await createClient();
   const { data, error } = await supabase.from("releases").select("id, published_at, published_by, note, deploy_state, snapshot").order("id", { ascending: false }).limit(50);
   const rows = (data ?? []) as Release[];
-  const owner = admin?.role === "owner";
+  const owner = can(admin.role, "rollback");
 
   return (
     <div className="space-y-6">

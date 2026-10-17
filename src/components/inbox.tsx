@@ -5,7 +5,7 @@ type Row = Record<string, unknown> & { id: number; status: string; notes: string
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
 
-export function Inbox({ table, rows, filter }: { table: InboxTable; rows: Row[]; filter?: string }) {
+export function Inbox({ table, rows, filter, canTriage }: { table: InboxTable; rows: Row[]; filter?: string; canTriage: boolean }) {
   const cfg = INBOXES[table];
   return (
     <div className="space-y-6">
@@ -50,6 +50,11 @@ export function Inbox({ table, rows, filter }: { table: InboxTable; rows: Row[];
                 <p className="mt-2 whitespace-pre-wrap">{String(r.why)}</p>
               </div>
             )}
+            {!canTriage ? (
+              <p className="mt-4 text-sm text-ink/60">
+                Status: <strong>{r.status}</strong>{r.notes ? <> · {r.notes}</> : null}
+              </p>
+            ) : (
             <form action={setStatusAction} className="mt-4 flex flex-wrap items-end gap-3">
               <input type="hidden" name="table" value={table} />
               <input type="hidden" name="id" value={r.id} />
@@ -69,6 +74,7 @@ export function Inbox({ table, rows, filter }: { table: InboxTable; rows: Row[];
                 Save
               </button>
             </form>
+            )}
           </li>
         ))}
       </ul>

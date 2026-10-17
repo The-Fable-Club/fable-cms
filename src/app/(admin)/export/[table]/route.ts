@@ -1,11 +1,11 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireCan } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
 import { INBOXES, isInbox } from "@/lib/inbox";
 import { createClient } from "@/lib/supabase/server";
 
 /** CSV download of one sign-up list. Admin only; the database applies row level security too. */
 export async function GET(_req: Request, { params }: { params: Promise<{ table: string }> }) {
-  await requireAdmin();
+  await requireCan("read_signups");
   const { table } = await params;
   if (!isInbox(table)) return new Response("Not found", { status: 404 });
 

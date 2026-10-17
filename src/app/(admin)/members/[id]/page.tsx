@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireCan } from "@/lib/auth";
 import { MemberForm } from "@/components/member-form";
 import { createClient } from "@/lib/supabase/server";
 import type { MemberRow } from "@/lib/snapshot";
@@ -7,6 +8,7 @@ import { saveMemberAction } from "../../content-actions";
 export const metadata = { title: "Edit member" };
 
 export default async function EditMember({ params }: { params: Promise<{ id: string }> }) {
+  await requireCan("manage_members");
   const { id } = await params;
   const num = Number(id);
   if (!Number.isInteger(num)) notFound();
