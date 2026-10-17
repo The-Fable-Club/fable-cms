@@ -116,7 +116,25 @@ The same zod schema validates it in the CMS (before saving a release) and in the
 
 ## Progress log (update as work lands)
 
-- 2026-10-17 done: data contract + date/status rules + tests (`src/lib/contract.ts`, `event-logic.ts`); migration 0004 written and applied by the user; snapshot builder `src/lib/snapshot.ts` with tests (44 tests passing); Sharann added as CMS owner; `docs/ACCESS.md`.
-- Next: seed script (5 placeholder events, 3 placeholder members, writes `fable-site/content/seed/snapshot.json`), then site side (copy contract, pull script, `content.ts` rewrite, UI states), then publish core, CMS screens, live tests.
-- The user allows the assistant to apply Supabase migrations itself from now on (service key in `.env.local`; keep secrets out of chat).
-- Commits: small and focused, never add a Claude co-author trailer (user rule, overrides any default).
+**State at 2026-10-17 (end of the first build session)**
+
+Built and committed, all with tests (CMS 81 unit tests, site 27):
+- Data contract and date/status rules (shared file, copied verbatim to the site).
+- CMS: snapshot builder, publish core (validate, save release, trigger Vercel deploy hook, one-per-minute limit), rollback, form parsers, CSV export, admin safety rules; screens for events (mode switches, hub editor, image upload), members, applications, registrations, releases (retry/rollback for owners), people (owners), dashboard Publish.
+- Site: reads events and general members from the published release (`scripts/pull-snapshot.mjs` before dev/build, strict on Vercel/CI, seed fallback locally and for a fresh database); tentative/TBA dates, registration states, hero strips (Live now / Registrations open / Next up), empty states; `/api/applications` and `/api/registrations` (zod, honeypot, origin check, size limit, insert-only publishable key).
+- Database: migrations 0001-0004 applied. **0005 is written but NOT applied** (see below). Placeholder data (5 events, 3 members) is seeded (`npm run seed`; `npx tsx scripts/seed-placeholders.mts --remove` deletes it).
+- Vercel: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` added to the `fable-site` project (Production and Preview).
+
+**Blocked on the user**
+1. Run `supabase/migrations/0005_trigger_functions_security_definer.sql` in the Supabase SQL editor. Live tests proved that without it EVERY registration and application is refused (the spam-limit triggers ran with the visitor's rights, and visitors can't read the tables they count). Or put the direct connection string in `.env.local` as `DATABASE_URL` and the assistant can run `node scripts/db.mjs --file ...` itself.
+2. Push both repos (fable-site: 16+ commits; fable-cms: ~25 commits). Pushing the site triggers a production build, which now needs the Supabase variables (already set).
+
+**After those, still to do**
+- `npm run test:live` should go fully green (security.live.test.ts exists; publish-flow live test not written yet).
+- First real Publish from the CMS (needs a GitHub sign-in, so the user clicks it), then verify the live site shows the placeholder events and the Registrations open strip.
+- Live end-to-end: add an event in the CMS, Publish, confirm timeline/event page/home strip update after the rebuild; then remove it and publish again.
+- Failure drills: bad deploy hook (release saved, retry works), invalid data (nothing published).
+- Cleanup (Phase 9): remove placeholders and Keystatic from the site, remove "placeholder" labels once real content exists; update site docs; known gaps: dashboard "unpublished changes" count ignores deleted rows; `/events/<unknown-slug>` answers 200 with a not-found page (Next streaming), not a real 404.
+- Optional: org-membership check at CMS sign-in (see ACCESS.md).
+
+**Rules to keep following**: small focused commits, no Claude co-author trailer, secrets never in chat, user pushes (or consents to a push), max motion on the site.
