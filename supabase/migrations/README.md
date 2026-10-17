@@ -11,5 +11,7 @@ The database will change while the club decides what each event / member / page 
 | File | What | Applied |
 |---|---|---|
 | `0001_baseline.sql` | Tables, RLS, policies, storage bucket, seed owner | yes, 2026-10-17 |
-| `0002_extra_fields.sql` | `extra jsonb` on aims/events/members, `schema_version` on releases | not yet |
-| `0003_public_release_invoker.sql` | Replaces the security-definer `public_release` view with a security-invoker view, a narrow RLS policy and column grants; locks the admin helper functions to signed-in users. **Run after 0002.** | not yet |
+| `0002_extra_fields.sql` | `extra jsonb` on aims/events/members, `schema_version` on releases | yes |
+| `0003_public_release_invoker.sql` | Replaces the security-definer `public_release` view with a security-invoker view, a narrow RLS policy and column grants; locks the admin helper functions to signed-in users. **Run after 0002.** | yes |
+| `0004_flexible_details_and_registrations.sql` | Date/time/venue/seats/apply modes on events; general members; the `registrations` table with RLS, spam brakes and an "event accepts registrations" check; insert-only access for the public role; deploy-status updates on releases | not yet |
+
