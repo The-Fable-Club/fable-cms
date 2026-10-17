@@ -1,5 +1,5 @@
--- The Fable Club CMS: database schema (DRAFT, not yet run).
--- Run in the Supabase SQL editor once the project exists. Review before running.
+-- 0001 baseline: the first version of the schema. APPLIED to the live project on 2026-10-17.
+-- Never edit an applied migration; add a new numbered file instead (see README.md).
 -- Authorisation is by GitHub username (Supabase GitHub provider).
 
 -- ---------------------------------------------------------------- helpers
