@@ -92,5 +92,8 @@ Dashboard · Events (+ hub posts) · Members (by category, reorder, photo) · Cl
 3. Turnstile/captcha on the join form: yes/no?
 4. Keep-alive vs Pro (see section 8).
 
-## 12. Setting up credentials (no secrets in chat)
+## 12. Domain
+The club domain is **thefableclub.com**. Suggested: public site on the apex / www, CMS on a subdomain such as cms.thefableclub.com (own Vercel project, own deployment protection).
+
+## 13. Setting up credentials (no secrets in chat)
 Fill `D:\Coding\fable-cms\.env.local` (NAME=value per line). Names are listed in `.env.example`. Only the Supabase **URL** and **anon key** are non-secret. The service-role key, deploy-hook URL and any GitHub token must stay in that file (and later in Vercel's environment settings).
