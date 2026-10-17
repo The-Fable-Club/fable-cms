@@ -1,6 +1,8 @@
 # Fable Club CMS: plan v2
 
-Private repo. The database baseline is applied (`supabase/migrations/0001_baseline.sql`); the admin app is being built.
+> **Historical.** This is the first plan (v2). The system as built is described in [ARCHITECTURE.md](ARCHITECTURE.md); what is left is in [ROADMAP.md](ROADMAP.md). Where they disagree, those win (for example: admins are now four access levels, not just owners and editors).
+
+Private repo (now public, for Vercel Hobby). The database baseline is applied (`supabase/migrations/0001_baseline.sql`); the admin app is built.
 Decisions from the club are folded in below; open items are in section 11.
 
 ## 1. Goals (as decided)

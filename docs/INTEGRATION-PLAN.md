@@ -1,6 +1,6 @@
 # Implementation plan: CMS to public site
 
-Status: **plan only.** Nothing in this document is built yet. Written 2026-10-17 from the club's pipeline description.
+Status: **built and live** (see the progress log at the bottom, and [ARCHITECTURE.md](ARCHITECTURE.md) for the current picture). Written 2026-10-17 from the club's pipeline description; sections 1-10 are the original plan and some details changed along the way (the board and faculty also moved into the CMS; "month only" dates were replaced by placeholder placement).
 
 ## 1. The pipeline (as described)
 1. Editors use the CMS to add **events**, **members** and the **data shared with event participants** (the hub).
