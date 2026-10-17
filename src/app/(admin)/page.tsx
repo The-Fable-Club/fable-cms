@@ -24,11 +24,12 @@ export default async function Dashboard() {
     .limit(1)
     .maybeSingle();
 
-  const [events, members, aims, newApps, ...changed] = await Promise.all([
+  const [events, members, aims, newApps, newRegs, ...changed] = await Promise.all([
     count("events"),
     count("members"),
     count("aims"),
     count("applications", { col: "status", eq: "new" }),
+    count("registrations", { col: "status", eq: "new" }),
     // "Unpublished changes": rows edited since the last release (or everything, before the first one).
     ...CONTENT_TABLES.map((t) => (last ? count(t, { col: "updated_at", gt: last.published_at }) : count(t))),
   ]);
@@ -39,13 +40,14 @@ export default async function Dashboard() {
     { label: "Members", value: members },
     { label: "Aims", value: aims },
     { label: "New applications", value: newApps },
+    { label: "New registrations", value: newRegs },
   ];
 
   return (
     <div className="space-y-10">
       <section>
         <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-4">
+        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-5">
           {cards.map((c) => (
             <div key={c.label} className="bg-paper p-5">
               <dt className="font-mono text-xs uppercase tracking-widest text-ink/60">{c.label}</dt>
