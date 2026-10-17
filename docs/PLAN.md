@@ -79,7 +79,7 @@ Dashboard · Events (+ hub posts) · Members (by category, reorder, photo) · Cl
 ## 10. Build phases
 | Phase | Delivers | Needs |
 |---|---|---|
-| 0 | Run `supabase/schema.sql`; GitHub provider on; seed owner | Supabase project, GitHub OAuth app |
+| 0 | Apply `supabase/migrations/0001_baseline.sql` (done), GitHub provider on, seed owner (done) | Supabase project, GitHub OAuth app |
 | 1 | Next app skeleton here, login, role checks, health page | `.env.local` filled |
 | 2 | Publish pipeline: snapshot, deploy hook; public `prebuild` pull script | Deploy hook URL |
 | 3 | Editing screens: events, members, club, aims, media | |
