@@ -97,7 +97,7 @@ export function parseMemberForm(f: FormData, supabaseUrl = "https://x.supabase.c
     slug: str(f, "slug") || slugify(name),
     name,
     role: str(f, "role"),
-    group: "Member",
+    group: pick(str(f, "group"), ["Faculty", "Board", "Leads", "Member"] as const, "Member"),
     position: Number(str(f, "position") || 100),
     department: str(f, "department"),
     year_mode,

@@ -107,6 +107,14 @@ describe("parseMemberForm", () => {
     const hidden = parseMemberForm(member({ email: "nope" }));
     expect(!hidden.ok && hidden.errors.email).toBeTruthy();
   });
+  it("takes the group from the form and falls back to Member", () => {
+    for (const g of ["Faculty", "Board", "Leads", "Member"]) {
+      const r = parseMemberForm(member({ group: g, role: "Chairperson" }));
+      expect(r.ok && r.row.group).toBe(g);
+    }
+    const bad = parseMemberForm(member({ group: "Admin" }));
+    expect(bad.ok && bad.row.group).toBe("Member");
+  });
   it("requires a name", () => {
     const r = parseMemberForm(member({ name: "" }));
     expect(!r.ok && r.errors.name).toBeTruthy();

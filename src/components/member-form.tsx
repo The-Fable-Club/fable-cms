@@ -29,7 +29,15 @@ export function MemberForm({ action, member }: { action: (prev: FormState, form:
         <Field label="Name" error={err.name}>
           <input name="name" defaultValue={m.name} required maxLength={80} className={inputCls} {...bad("name")} />
         </Field>
-        <Field label="Role" hint='Leave empty for "Member".' error={err.role}>
+        <Field label="Group" hint="Where they appear on the Members page and the home page." error={err.group}>
+          <select name="group" defaultValue={m.group} className={inputCls}>
+            <option value="Faculty">Faculty coordinators</option>
+            <option value="Board">The board</option>
+            <option value="Leads">Leads</option>
+            <option value="Member">Members</option>
+          </select>
+        </Field>
+        <Field label="Role" hint='The position or category, for example "Chairperson". Empty = "Member".' error={err.role}>
           <input name="role" defaultValue={m.role} maxLength={60} className={inputCls} {...bad("role")} />
         </Field>
         <Field label="Department" error={err.department}>

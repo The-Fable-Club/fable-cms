@@ -11,7 +11,7 @@ export default async function EditMember({ params }: { params: Promise<{ id: str
   const num = Number(id);
   if (!Number.isInteger(num)) notFound();
   const supabase = await createClient();
-  const { data } = await supabase.from("members").select("*").eq("id", num).eq("group", "Member").maybeSingle();
+  const { data } = await supabase.from("members").select("*").eq("id", num).maybeSingle();
   if (!data) notFound();
   const { id: _id, ...member } = data as MemberRow;
   return (
