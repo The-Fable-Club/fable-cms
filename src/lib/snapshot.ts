@@ -129,6 +129,8 @@ export function memberCandidate(r: MemberRow, supabaseUrl: string) {
     slug: r.slug,
     name: r.name,
     role: blank(r.role) ?? "Member",
+    group: r.group,
+    order: r.position,
     department: r.department ?? "",
     year: r.year_mode === "none" ? { mode: "none" } : { mode: r.year_mode, text: r.year },
     bio: r.bio ?? "",
@@ -180,7 +182,7 @@ export function buildSnapshot(
   }
 
   const memberRows = rows.members
-    .filter((r) => !r.archived && r.group === "Member")
+    .filter((r) => !r.archived)
     .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
   for (const row of memberRows) {
     const parsed = SnapshotMember.safeParse(memberCandidate(row, opts.supabaseUrl));

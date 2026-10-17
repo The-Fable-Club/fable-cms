@@ -29,10 +29,15 @@ describe("buildSnapshot", () => {
     expect(r.snapshot.events[0].highlights).toEqual(["a"]);
   });
 
-  it("skips archived rows and non-Member groups", () => {
-    const r = build([ev(), ev({ id: 2, slug: "old", archived: true })], [mem(), mem({ id: 2, slug: "b", group: "Board" }), mem({ id: 3, slug: "c", archived: true })]);
+  it("skips archived rows and keeps every group, in order", () => {
+    const r = build([ev(), ev({ id: 2, slug: "old", archived: true })], [
+      mem({ id: 1, slug: "m", position: 50 }),
+      mem({ id: 2, slug: "b", group: "Board", position: 10 }),
+      mem({ id: 3, slug: "c", archived: true }),
+      mem({ id: 4, slug: "f", group: "Faculty", position: 1 }),
+    ]);
     expect(r.ok && r.snapshot.events.map((e) => e.slug)).toEqual(["prompt-workshop"]);
-    expect(r.ok && r.snapshot.members.map((m) => m.slug)).toEqual(["ada-l"]);
+    expect(r.ok && r.snapshot.members.map((m) => [m.slug, m.group, m.order])).toEqual([["f", "Faculty", 1], ["b", "Board", 10], ["m", "Member", 50]]);
   });
 
   it("defaults an empty role to Member", () => {

@@ -114,10 +114,16 @@ export const SnapshotEvent = z.object({
 });
 export type SnapshotEvent = z.infer<typeof SnapshotEvent>;
 
+export const MemberGroup = z.enum(["Faculty", "Board", "Leads", "Member"]);
+export type MemberGroup = z.infer<typeof MemberGroup>;
+
 export const SnapshotMember = z.object({
   slug: slugStr,
   name: shortText(80),
   role: shortText(60),
+  // Added after the first release shape; defaults keep older releases readable.
+  group: MemberGroup.default("Member"),
+  order: z.number().int().min(0).max(100000).default(100),
   department: z.string().trim().max(120),
   year: YearInfo,
   bio: z.string().trim().max(1200),
