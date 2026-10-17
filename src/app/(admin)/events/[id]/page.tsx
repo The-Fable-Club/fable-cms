@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { EventForm } from "@/components/event-form";
-import { requireAdmin } from "@/lib/auth";
+import { requireCan } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { EventRow } from "@/lib/snapshot";
 import { saveEventAction } from "../../content-actions";
@@ -8,7 +8,7 @@ import { saveEventAction } from "../../content-actions";
 export const metadata = { title: "Edit event" };
 
 export default async function EditEvent({ params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdmin();
+  const admin = await requireCan("edit_draft_events");
   const { id } = await params;
   const num = Number(id);
   if (!Number.isInteger(num)) notFound();
@@ -19,7 +19,7 @@ export default async function EditEvent({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Edit event</h1>
-      <EventForm action={saveEventAction.bind(null, num)} event={event} author={admin.username} />
+      <EventForm action={saveEventAction.bind(null, num)} event={event} author={admin.username} role={admin.role} />
     </div>
   );
 }

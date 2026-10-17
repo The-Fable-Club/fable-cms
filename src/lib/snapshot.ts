@@ -30,6 +30,8 @@ export type EventRow = {
   photo_path: string | null;
   hub: unknown;
   archived: boolean;
+  /** Saved but not ready: never published. Creators can only save drafts; admins take them live. */
+  draft?: boolean;
 };
 
 export type MemberRow = {
@@ -176,7 +178,7 @@ export function buildSnapshot(
   const events: z.infer<typeof SnapshotEvent>[] = [];
   const members: z.infer<typeof SnapshotMember>[] = [];
 
-  for (const row of rows.events.filter((r) => !r.archived)) {
+  for (const row of rows.events.filter((r) => !r.archived && !r.draft)) {
     const parsed = SnapshotEvent.safeParse(eventCandidate(row, opts.supabaseUrl));
     if (parsed.success) events.push(parsed.data);
     else problems.push(...issuesToProblems("event", row.title || row.slug, parsed.error.issues));

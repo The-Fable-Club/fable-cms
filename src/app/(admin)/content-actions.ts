@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth";
+import { requireCan } from "@/lib/auth";
+import { canSaveEvent } from "@/lib/roles";
 import { parseEventForm, parseMemberForm } from "@/lib/forms";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -17,11 +18,20 @@ function friendly(error: NonNullable<DbError>): FormState {
 }
 
 export async function saveEventAction(id: number | null, _prev: FormState, form: FormData): Promise<FormState> {
-  await requireAdmin();
+  const admin = await requireCan("edit_draft_events");
   const parsed = parseEventForm(form, publicEnv().url);
   if (!parsed.ok) return { errors: parsed.errors, message: "Not saved: please fix the highlighted fields." };
 
   const supabase = await createClient();
+  let existingDraft: boolean | null = null;
+  if (id !== null) {
+    const { data } = await supabase.from("events").select("draft").eq("id", id).maybeSingle();
+    if (!data) return { errors: {}, message: "Not saved: that event no longer exists, or you can't see it." };
+    existingDraft = Boolean(data.draft);
+  }
+  const allowed = canSaveEvent(admin.role, { existingDraft, newDraft: Boolean(parsed.row.draft) });
+  if (!allowed.ok) return { errors: {}, message: allowed.message };
+
   const { error } = id === null ? await supabase.from("events").insert(parsed.row) : await supabase.from("events").update(parsed.row).eq("id", id);
   if (error) return friendly(error);
   revalidatePath("/events");
@@ -30,7 +40,7 @@ export async function saveEventAction(id: number | null, _prev: FormState, form:
 }
 
 export async function saveMemberAction(id: number | null, _prev: FormState, form: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requireCan("manage_members");
   const parsed = parseMemberForm(form, publicEnv().url);
   if (!parsed.ok) return { errors: parsed.errors, message: "Not saved: please fix the highlighted fields." };
 

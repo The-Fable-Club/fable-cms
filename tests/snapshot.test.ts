@@ -88,6 +88,14 @@ describe("buildSnapshot", () => {
     expect(r.ok && r.snapshot.events[0].hub[1].body).toBeNull();
   });
 
+  it("never publishes a draft event", () => {
+    const r = build([ev(), ev({ id: 2, slug: "wip", title: "Work in progress", draft: true })]);
+    expect(r.ok && r.snapshot.events.map((e) => e.slug)).toEqual(["prompt-workshop"]);
+    // an invalid draft cannot block publishing the rest
+    const bad = build([ev(), ev({ id: 3, slug: "Bad Slug", draft: true })]);
+    expect(bad.ok).toBe(true);
+  });
+
   it("builds public media URLs", () => {
     const r = build([ev({ photo_path: "events/a.webp" })]);
     expect(r.ok && r.snapshot.events[0].photo).toBe(`${URL}/storage/v1/object/public/media/events/a.webp`);

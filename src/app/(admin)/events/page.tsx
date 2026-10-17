@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireCan } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dateLabel, deriveStatus } from "@/lib/event-logic";
 import { eventCandidate, type EventRow } from "@/lib/snapshot";
@@ -9,6 +10,7 @@ export const metadata = { title: "Events" };
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
 
 export default async function EventsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireCan("edit_draft_events");
   const { saved } = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("events").select("*").order("start_date", { ascending: true, nullsFirst: false });
@@ -41,6 +43,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
                 <span className="font-mono text-xs uppercase tracking-wider text-ink/60">{parsed.success ? dateLabel(parsed.data.date) : "Needs fixing"}</span>
                 <span className="font-mono text-xs uppercase tracking-wider">{status ?? "?"}</span>
                 <span className="font-mono text-xs uppercase tracking-wider text-ink/60">reg: {r.apply_mode}</span>
+                {r.draft && <span className="border-2 border-dashed border-ink px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider">draft</span>}
                 {r.archived && <span className="bg-ink px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-paper">hidden</span>}
                 {!parsed.success && <span className="bg-clay-deep px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-paper">invalid</span>}
               </Link>

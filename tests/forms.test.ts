@@ -52,6 +52,11 @@ describe("parseEventForm", () => {
     const bad = parseEventForm(event({ date_mode: "tba", date_place_tba: "2027-02-30" }));
     expect(!bad.ok && bad.errors.date_place).toBeTruthy();
   });
+  it("reads the draft flag", () => {
+    expect(parseEventForm(event({ draft: "on" })).ok && (parseEventForm(event({ draft: "on" })) as { row: { draft: boolean } }).row.draft).toBe(true);
+    const live = parseEventForm(event());
+    expect(live.ok && live.row.draft).toBe(false);
+  });
   it("no longer accepts the month-only mode", () => {
     const r = parseEventForm(event({ date_mode: "month", date_month: "2027-02", start_date: "" }));
     expect(r.ok).toBe(false); // read as an exact date with no start

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { monthLabel } from "@/lib/event-logic";
+import { can, type Role } from "@/lib/roles";
 import type { EventRow } from "@/lib/snapshot";
 import type { FormState } from "@/app/(admin)/form-state";
 import { ArtPicker, Field, ModeGroup, inputCls } from "@/components/form-bits";
@@ -13,15 +14,16 @@ type Props = {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
   event: Omit<EventRow, "id"> | null;
   author: string;
+  role: Role;
 };
 
 const blank: Omit<EventRow, "id"> = {
   slug: "", title: "", kind: "Workshop", phase: 1, status_override: null, date_mode: "exact", start_date: null, end_date: null, date_month: null,
   date_text: null, time_mode: "text", time_text: "", venue_mode: "text", venue: "", seats_mode: "open", seats: null, apply_mode: "none",
-  apply_url: null, summary: "", description: "", highlights: [], art: "sprouts", photo_path: null, hub: [], archived: false,
+  apply_url: null, summary: "", description: "", highlights: [], art: "sprouts", photo_path: null, hub: [], archived: false, draft: true,
 };
 
-export function EventForm({ action, event, author }: Props) {
+export function EventForm({ action, event, author, role }: Props) {
   const [state, formAction, pending] = useActionState(action, { errors: {} } as FormState);
   const e = event ?? blank;
   // Events saved with the old "month only" option open as "write my own", with the month as the text and a placeholder place.
@@ -210,6 +212,24 @@ export function EventForm({ action, event, author }: Props) {
       <ImageField name="photo_path" folder="events" defaultPath={e.photo_path} label="Photo (optional)" />
       <ArtPicker defaultValue={e.art} />
       <HubEditor initial={Array.isArray(e.hub) ? (e.hub as never[]) : []} author={author} error={err.hub} />
+
+      <div className="border-2 border-ink p-4">
+        {can(role, "edit_live_events") ? (
+          <label className="flex items-start gap-3">
+            <input type="checkbox" name="draft" defaultChecked={e.draft ?? false} className="mt-1 size-5 accent-[var(--color-clay-deep)]" />
+            <span className="text-sm">
+              <strong>Draft.</strong> Saved but never published. Untick it to let this event go out with the next publish.
+            </span>
+          </label>
+        ) : (
+          <>
+            <input type="hidden" name="draft" value="on" />
+            <p className="text-sm">
+              <strong>Draft.</strong> You can save events as drafts. An admin reviews and takes them live.
+            </p>
+          </>
+        )}
+      </div>
 
       <label className="flex items-center gap-3">
         <input type="checkbox" name="archived" defaultChecked={e.archived} className="size-5 accent-[var(--color-clay-deep)]" />

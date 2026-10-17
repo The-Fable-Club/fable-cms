@@ -84,6 +84,7 @@ export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co
     photo_path: orNull(str(f, "photo_path")),
     hub,
     archived: f.get("archived") === "on",
+    draft: f.get("draft") === "on",
   };
 
   const check = SnapshotEvent.safeParse(eventCandidate({ ...row, id: 0 }, supabaseUrl));
