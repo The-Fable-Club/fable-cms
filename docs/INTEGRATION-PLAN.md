@@ -6,7 +6,7 @@ Status: **plan only.** Nothing in this document is built yet. Written 2026-10-17
 1. Editors use the CMS to add **events**, **members** and the **data shared with event participants** (the hub).
 2. They click **Publish**.
 3. The public site updates as planned before: one rebuild, reading the database once; the site stays static.
-4. The people already on the board and the faculty stay **hardcoded in the site repo**. Only the **exclusive members page** follows the CMS.
+4. Everyone (faculty, board, leads, members) is managed in the CMS. (Originally the board was to stay hardcoded; changed on 2026-10-17.)
 5. Every detail that may not be known yet has a **placeholder option** (choose a month, or write your own text).
 6. CMS UI stays **simple**, in the main site's theme.
 
@@ -14,14 +14,14 @@ Status: **plan only.** Nothing in this document is built yet. Written 2026-10-17
 
 | Thing | Source of truth | Why |
 |---|---|---|
-| Faculty and board (home people stage, contact section) | Hardcoded in the site repo (`content/members/*.json`, unchanged) | They rarely change and shouldn't depend on the database |
-| General members (the `/members` page) | **CMS** | Changes often, many people |
+| Faculty, board and leads (home people stage, contact section, first groups on `/members`) | **CMS** (moved from the site repo on 2026-10-17; the site no longer has `content/members`) | The user wanted one place to manage everyone |
+| General members (last group on `/members`) | **CMS** | Changes often, many people |
 | Events (home, `/events`, event pages, timeline) | **CMS** | Core use case |
 | Hub posts per event (links, files, updates) | **CMS** (stored on the event) | Published content, appears after Publish |
 | Join-form applications | Written straight to Supabase by the site; read in the CMS (separate phase) | Live data, not published content |
 | Club details, aims | CMS later (kept in the repo until then) | Low priority |
 
-`/members` shows two groups: the hardcoded **Faculty / Board** (as now) and the CMS-driven **Members**.
+`/members` shows Faculty, Board, Leads and Members, all from the CMS (the member `group` and `order` fields).
 
 ## 3. Flexible ("not decided yet") details
 
@@ -138,3 +138,5 @@ Built and committed, all with tests (CMS 81 unit tests, site 27):
 - Optional: org-membership check at CMS sign-in (see ACCESS.md).
 
 **Rules to keep following**: small focused commits, no Claude co-author trailer, secrets never in chat, user pushes (or consents to a push), max motion on the site.
+
+**Update 2026-10-17 (later):** `0005` applied; live security tests pass (20/20). Faculty and board imported into the database (`scripts/import-board.mts`) and published as release #7 BEFORE the site that reads them is pushed (otherwise the home people section would be empty). The publish drill (`tests/live/publish.live.test.ts`) proved add-event -> publish -> real rebuild -> event page and /events update; it is being re-run after the site push. `scripts/publish-now.mts` publishes from the command line.
