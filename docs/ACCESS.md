@@ -19,10 +19,10 @@ Being in the org or on the repo does **not** let anyone into the CMS. Signing in
 | sharann-del | owner | haise-727 (2026-10-17) |
 
 - **owner**: edit, publish, re-publish old releases, manage admins.
-- **admin**: edit and publish. Cannot manage admins.
+- **editor** (the database calls it `editor`): edit and publish. Cannot manage admins.
 - The `ADMIN_GITHUB_USERNAMES` value in `.env.local` is only a leftover note. The table decides.
 - Usernames are stored lower-case and matched lower-case.
-- To add or remove someone: the CMS **Admins** screen (owner only, being built), or in the Supabase SQL editor: `insert into admins (github_username, role, added_by) values ('name', 'admin', 'your-name');`
+- To add or remove someone: the CMS **Admins** screen (owner only, being built), or in the Supabase SQL editor: `insert into admins (github_username, role, added_by) values ('name', 'editor', 'your-name');`
 
 ## GitHub (as of 2026-10-17)
 
