@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 
 // Everything inside (admin) requires a signed-in admin, checked here on the
@@ -30,6 +31,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </header>
+      <nav aria-label="Sections" className="flex flex-wrap gap-x-6 gap-y-1 border-b-2 border-ink px-6 py-2 text-sm font-medium">
+        {[
+          ["/", "Dashboard"],
+          ["/events", "Events"],
+          ["/members", "Members"],
+          ["/applications", "Applications"],
+          ["/registrations", "Registrations"],
+          ["/releases", "Releases"],
+          ...(admin.role === "owner" ? [["/admins", "People"]] : []),
+        ].map(([href, label]) => (
+          <Link key={href} href={href} className="py-1 underline-offset-4 hover:text-clay-deep hover:underline">
+            {label}
+          </Link>
+        ))}
+      </nav>
       <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
     </div>
   );
