@@ -113,3 +113,10 @@ The same zod schema validates it in the CMS (before saving a release) and in the
 - The Vercel **deploy hook** URL for the public site (goes in `.env.local`, never in chat).
 - The public site's live URL (not secret).
 - Which first real events to enter, and the first general members, when you have them.
+
+## Progress log (update as work lands)
+
+- 2026-10-17 done: data contract + date/status rules + tests (`src/lib/contract.ts`, `event-logic.ts`); migration 0004 written and applied by the user; snapshot builder `src/lib/snapshot.ts` with tests (44 tests passing); Sharann added as CMS owner; `docs/ACCESS.md`.
+- Next: seed script (5 placeholder events, 3 placeholder members, writes `fable-site/content/seed/snapshot.json`), then site side (copy contract, pull script, `content.ts` rewrite, UI states), then publish core, CMS screens, live tests.
+- The user allows the assistant to apply Supabase migrations itself from now on (service key in `.env.local`; keep secrets out of chat).
+- Commits: small and focused, never add a Claude co-author trailer (user rule, overrides any default).
