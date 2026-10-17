@@ -20,8 +20,9 @@ export function canRemove(admins: AdminRow[], actor: string, target: string): { 
   return { ok: true };
 }
 
-/** Can `target`'s role change to `role`? The last owner can't be demoted. */
-export function canChangeRole(admins: AdminRow[], target: string, role: "owner" | "editor"): { ok: true } | { ok: false; message: string } {
+/** Can `actor` change `target`'s role to `role`? Nobody changes their own level (so an owner can't demote or lock themselves out), and the last owner can't be demoted. */
+export function canChangeRole(admins: AdminRow[], actor: string, target: string, role: "owner" | "editor"): { ok: true } | { ok: false; message: string } {
+  if (target === actor) return { ok: false, message: "You can't change your own access level. Ask another owner." };
   const t = admins.find((a) => a.github_username === target);
   if (!t) return { ok: false, message: "That person is not in the list." };
   if (t.role === "owner" && role !== "owner" && admins.filter((a) => a.role === "owner").length <= 1) return { ok: false, message: "There must always be at least one owner." };

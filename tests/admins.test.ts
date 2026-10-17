@@ -32,13 +32,18 @@ describe("canRemove", () => {
 });
 
 describe("canChangeRole", () => {
-  it("allows promoting and demoting when another owner remains", () => {
-    expect(canChangeRole(list, "ada", "owner").ok).toBe(true);
-    expect(canChangeRole(list, "sharann-del", "editor").ok).toBe(true);
+  it("allows promoting and demoting other people when another owner remains", () => {
+    expect(canChangeRole(list, "haise-727", "ada", "owner").ok).toBe(true);
+    expect(canChangeRole(list, "haise-727", "sharann-del", "editor").ok).toBe(true);
+  });
+  it("nobody changes their own level, not even an owner", () => {
+    expect(canChangeRole(list, "haise-727", "haise-727", "editor").ok).toBe(false);
+    expect(canChangeRole(list, "haise-727", "haise-727", "owner").ok).toBe(false);
+    expect(canChangeRole(list, "ada", "ada", "owner").ok).toBe(false);
   });
   it("refuses to demote the last owner", () => {
-    const one: AdminRow[] = [{ github_username: "a", role: "owner" }];
-    expect(canChangeRole(one, "a", "editor").ok).toBe(false);
-    expect(canChangeRole(one, "a", "owner").ok).toBe(true);
+    const one: AdminRow[] = [{ github_username: "a", role: "owner" }, { github_username: "b", role: "editor" }];
+    expect(canChangeRole(one, "b", "a", "editor").ok).toBe(false);
   });
+  it("reports a missing person", () => expect(canChangeRole(list, "haise-727", "nobody", "editor").ok).toBe(false));
 });

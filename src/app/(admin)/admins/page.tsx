@@ -28,23 +28,27 @@ export default async function Admins() {
               {r.github_username === me.username && <span className="ml-2 text-xs text-ink/50">(you)</span>}
             </span>
             <span className="text-xs text-ink/60">added by {r.added_by ?? "?"}</span>
-            <form action={changeRoleAction} className="flex items-center gap-2">
-              <input type="hidden" name="username" value={r.github_username} />
-              <select name="role" defaultValue={r.role} aria-label={`Role of ${r.github_username}`} className="h-9 border-2 border-ink bg-paper px-2 text-sm">
-                <option value="editor">editor</option>
-                <option value="owner">owner</option>
-              </select>
-              <button type="submit" className="h-9 border-2 border-ink px-3 text-sm hover:bg-ink hover:text-paper">
-                Change
-              </button>
-            </form>
-            {r.github_username !== me.username && (
+            {r.github_username === me.username ? (
+              <span className="bg-ink px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-paper">{r.role}</span>
+            ) : (
+              <>
+                <form action={changeRoleAction} className="flex items-center gap-2">
+                  <input type="hidden" name="username" value={r.github_username} />
+                  <select name="role" defaultValue={r.role} aria-label={`Role of ${r.github_username}`} className="h-9 border-2 border-ink bg-paper px-2 text-sm">
+                    <option value="editor">editor</option>
+                    <option value="owner">owner</option>
+                  </select>
+                  <button type="submit" className="h-9 border-2 border-ink px-3 text-sm hover:bg-ink hover:text-paper">
+                    Change
+                  </button>
+                </form>
               <form action={removeAdminAction}>
                 <input type="hidden" name="username" value={r.github_username} />
                 <button type="submit" className="h-9 px-3 text-sm underline underline-offset-4 hover:text-clay-deep">
                   Remove
                 </button>
               </form>
+              </>
             )}
           </li>
         ))}

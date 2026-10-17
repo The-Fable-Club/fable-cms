@@ -35,12 +35,12 @@ export async function removeAdminAction(form: FormData) {
 }
 
 export async function changeRoleAction(form: FormData) {
-  await requireOwner();
+  const owner = await requireOwner();
   const target = String(form.get("username") ?? "");
   const role = String(form.get("role") ?? "");
   if (role !== "owner" && role !== "editor") return;
   const { supabase, admins } = await list();
-  if (!canChangeRole(admins, target, role).ok) return;
+  if (!canChangeRole(admins, owner.username, target, role).ok) return;
   await supabase.from("admins").update({ role }).eq("github_username", target);
   revalidatePath("/admins");
 }
