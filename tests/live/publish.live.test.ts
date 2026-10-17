@@ -96,10 +96,10 @@ describe("publish -> rebuild -> live site", () => {
     expect(r).toMatchObject({ ok: true, deploy: "triggered" });
 
     await waitFor(async () => (await page(`/events/${SLUG}`)).includes(TITLE), "the new event page");
-    const events = await page("/events");
-    expect(events).toContain(TITLE);
+    // the CDN can serve a page from the previous build for a short while: wait for each page rather than assume
+    await waitFor(async () => (await page("/events")).includes(TITLE), "the new event on /events", 120_000);
+    await waitFor(async () => (await page("/")).includes(TITLE), "the new event on the home page", 120_000);
     const home = await page("/");
-    expect(home).toContain(TITLE);
     expect(home).toContain("Registrations open"); // a registration-open event is announced
     const eventPage = await page(`/events/${SLUG}`);
     expect(eventPage).toContain("Register for this event"); // the form appears
