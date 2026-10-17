@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
+import { ROLE_INFO, navFor } from "@/lib/roles";
 
 // Everything inside (admin) requires a signed-in admin, checked here on the
 // server for every request (the proxy only does a first, cheap redirect).
@@ -21,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             )}
             <span className="font-medium">@{admin.username}</span>
             <span className="bg-ink px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-paper">
-              {admin.role}
+              {ROLE_INFO[admin.role].label}
             </span>
           </span>
           <form action="/auth/signout" method="post">
@@ -32,15 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <nav aria-label="Sections" className="flex flex-wrap gap-x-6 gap-y-1 border-b-2 border-ink px-6 py-2 text-sm font-medium">
-        {[
-          ["/", "Dashboard"],
-          ["/events", "Events"],
-          ["/members", "Members"],
-          ["/applications", "Applications"],
-          ["/registrations", "Registrations"],
-          ["/releases", "Releases"],
-          ...(admin.role === "owner" ? [["/admins", "People"]] : []),
-        ].map(([href, label]) => (
+        {navFor(admin.role).map(({ href, label }) => (
           <Link key={href} href={href} className="py-1 underline-offset-4 hover:text-clay-deep hover:underline">
             {label}
           </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ROLES, ROLE_INFO } from "@/lib/roles";
 import { addAdminAction, type AdminsState } from "@/app/(admin)/admins/actions";
 
 export function AddAdminForm() {
@@ -13,9 +14,12 @@ export function AddAdminForm() {
       </label>
       <label className="block">
         <span className="font-mono text-xs uppercase tracking-widest text-ink/60">Role</span>
-        <select name="role" defaultValue="editor" className="mt-1 block h-11 border-2 border-ink bg-paper px-2">
-          <option value="editor">Editor (edit and publish)</option>
-          <option value="owner">Owner (also manages people)</option>
+        <select name="role" defaultValue="member" className="mt-1 block h-11 border-2 border-ink bg-paper px-2">
+          {[...ROLES].reverse().map((r) => (
+            <option key={r} value={r}>
+              {ROLE_INFO[r].label}
+            </option>
+          ))}
         </select>
       </label>
       <button type="submit" disabled={pending} className="h-11 bg-ink px-6 font-medium text-paper transition-colors hover:bg-clay-deep disabled:opacity-50">

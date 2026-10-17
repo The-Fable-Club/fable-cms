@@ -1,11 +1,15 @@
 import { PublishPanel } from "@/components/publish-panel";
+import { requireAdmin } from "@/lib/auth";
+import { can, ROLE_INFO } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard" };
 
 const CONTENT_TABLES = ["events", "members", "aims", "club_settings"] as const;
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const admin = await requireAdmin();
+  const { error: notice } = await searchParams;
   // The user's own session: row level security applies to every query below.
   const supabase = await createClient();
 
@@ -36,18 +40,25 @@ export default async function Dashboard() {
   const unpublished = changed.reduce((a, b) => a + b, 0);
 
   const cards = [
-    { label: "Events", value: events },
-    { label: "Members", value: members },
-    { label: "Aims", value: aims },
+    ...(can(admin.role, "edit_draft_events") ? [{ label: "Events", value: events }] : []),
+    ...(can(admin.role, "manage_members") ? [{ label: "Members", value: members }, { label: "Aims", value: aims }] : []),
     { label: "New applications", value: newApps },
     { label: "New registrations", value: newRegs },
   ];
 
   return (
     <div className="space-y-10">
+      {notice === "not-allowed" && (
+        <p role="alert" className="border-2 border-clay-deep p-3 text-sm">
+          Your level ({ROLE_INFO[admin.role].label}) can&apos;t open that page.
+        </p>
+      )}
       <section>
         <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-5">
+        <p className="mt-1 text-sm text-ink/60">
+          Signed in as {ROLE_INFO[admin.role].label}. {ROLE_INFO[admin.role].summary}
+        </p>
+        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-2 lg:grid-cols-5">
           {cards.map((c) => (
             <div key={c.label} className="bg-paper p-5">
               <dt className="font-mono text-xs uppercase tracking-widest text-ink/60">{c.label}</dt>
@@ -57,6 +68,7 @@ export default async function Dashboard() {
         </dl>
       </section>
 
+      {can(admin.role, "publish") && (
       <section className="border-2 border-ink p-6">
         <h2 className="text-xl font-semibold">Publishing</h2>
         <p className="mt-2 text-sm text-ink/70">
@@ -68,6 +80,7 @@ export default async function Dashboard() {
         </p>
         <PublishPanel unpublished={unpublished} hookConfigured={Boolean(process.env.VERCEL_DEPLOY_HOOK_URL?.trim())} />
       </section>
+      )}
     </div>
   );
 }

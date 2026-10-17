@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/auth";
 import { canChangeRole, canRemove, parseNewAdmin, type AdminRow } from "@/lib/admins";
+import { ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export type AdminsState = { message: string | null; ok: boolean };
@@ -38,9 +39,10 @@ export async function changeRoleAction(form: FormData) {
   const owner = await requireOwner();
   const target = String(form.get("username") ?? "");
   const role = String(form.get("role") ?? "");
-  if (role !== "owner" && role !== "editor") return;
+  const level = ROLES.find((r) => r === role);
+  if (!level) return;
   const { supabase, admins } = await list();
-  if (!canChangeRole(admins, owner.username, target, role).ok) return;
-  await supabase.from("admins").update({ role }).eq("github_username", target);
+  if (!canChangeRole(admins, owner.username, target, level).ok) return;
+  await supabase.from("admins").update({ role: level }).eq("github_username", target);
   revalidatePath("/admins");
 }

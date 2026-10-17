@@ -1,11 +1,12 @@
 import { AddAdminForm } from "@/components/add-admin-form";
 import { requireOwner } from "@/lib/auth";
+import { ROLES, ROLE_INFO, type Role } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { changeRoleAction, removeAdminAction } from "./actions";
 
 export const metadata = { title: "People" };
 
-type Row = { github_username: string; role: "owner" | "editor"; added_by: string | null; added_at: string };
+type Row = { github_username: string; role: Role; added_by: string | null; added_at: string };
 
 export default async function Admins() {
   const me = await requireOwner();
@@ -19,6 +20,15 @@ export default async function Admins() {
       <p className="text-sm text-ink/60">
         Only people listed here can sign in to the CMS. Being in the GitHub organisation or on the repository does not give access. Owners also manage this list.
       </p>
+      <ul className="grid gap-px border-2 border-ink bg-ink text-sm sm:grid-cols-2">
+        {[...ROLES].reverse().map((r) => (
+          <li key={r} className="bg-paper p-3">
+            <strong>{ROLE_INFO[r].label}</strong>
+            <span className="block text-ink/70">{ROLE_INFO[r].summary}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-ink/60">Each level includes everything the levels below it can do.</p>
       <AddAdminForm />
       <ul className="divide-y-2 divide-ink border-y-2 border-ink">
         {rows.map((r) => (
@@ -35,8 +45,11 @@ export default async function Admins() {
                 <form action={changeRoleAction} className="flex items-center gap-2">
                   <input type="hidden" name="username" value={r.github_username} />
                   <select name="role" defaultValue={r.role} aria-label={`Role of ${r.github_username}`} className="h-9 border-2 border-ink bg-paper px-2 text-sm">
-                    <option value="editor">editor</option>
-                    <option value="owner">owner</option>
+                    {[...ROLES].reverse().map((x) => (
+                      <option key={x} value={x}>
+                        {ROLE_INFO[x].label}
+                      </option>
+                    ))}
                   </select>
                   <button type="submit" className="h-9 border-2 border-ink px-3 text-sm hover:bg-ink hover:text-paper">
                     Change
