@@ -1,7 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
-import type { PublishDeps } from "@/lib/publish";
+import type { Snapshot } from "@/lib/contract";
+import type { PublishDeps, RepublishDeps } from "@/lib/publish";
 import type { EventRow, MemberRow } from "@/lib/snapshot";
 
 /** Real dependencies for publish(): the signed-in admin's own session (row level security applies) and the deploy hook from the environment. */
@@ -43,6 +44,19 @@ export async function publishDeps(): Promise<PublishDeps> {
     async recordDeploy(id, state) {
       const { error } = await supabase.from("releases").update({ deploy_state: state }).eq("id", id);
       if (error) fail("Could not record the deploy", error.message);
+    },
+  };
+}
+
+export async function republishDeps(): Promise<RepublishDeps> {
+  const base = await publishDeps();
+  const supabase = await createClient();
+  return {
+    ...base,
+    async loadRelease(id) {
+      const { data, error } = await supabase.from("releases").select("snapshot").eq("id", id).maybeSingle();
+      if (error) throw new Error(`Could not read release #${id}: ${error.message}`);
+      return (data?.snapshot as Snapshot | undefined) ?? null;
     },
   };
 }
