@@ -1,3 +1,4 @@
+import { PublishPanel } from "@/components/publish-panel";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard" };
@@ -63,16 +64,7 @@ export default async function Dashboard() {
           <strong className="text-ink">{unpublished}</strong> {unpublished === 1 ? "row has" : "rows have"} changed
           since then.
         </p>
-        <button
-          type="button"
-          disabled
-          className="mt-4 h-11 bg-ink px-6 font-medium text-paper disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Publish
-        </button>
-        <p className="mt-2 text-xs text-ink/50">
-          Publishing is the next step: it needs the Vercel deploy hook for the public site.
-        </p>
+        <PublishPanel unpublished={unpublished} hookConfigured={Boolean(process.env.VERCEL_DEPLOY_HOOK_URL?.trim())} />
       </section>
     </div>
   );
