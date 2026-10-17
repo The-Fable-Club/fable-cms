@@ -1,6 +1,6 @@
 # Fable Club CMS: plan v2
 
-Private repo. Nothing here is built yet except the env template and the SQL draft (`supabase/schema.sql`, not yet run).
+Private repo. The database baseline is applied (`supabase/migrations/0001_baseline.sql`); the admin app is being built.
 Decisions from the club are folded in below; open items are in section 11.
 
 ## 1. Goals (as decided)
