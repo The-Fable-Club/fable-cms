@@ -58,3 +58,13 @@ git push origin main
 - `https://cms.thefableclub.com/api/health` returns `{"ok":true}`.
 - Sign in at `https://cms.thefableclub.com`; you land on the dashboard as owner.
 - `https://thefableclub.com` shows the site.
+
+## Notes from the first real deploy (2026-10-17)
+- Vercel Hobby refuses **private organisation repos**; the CMS repo was made public (nothing secret is in it, checked across its full history).
+- Old CLI versions can't log in any more: `npm install -g vercel@latest`.
+- `vercel link` also **writes a short-lived `VERCEL_OIDC_TOKEN` line into `.env.local`**; it is not needed by the CMS and can be deleted from the file.
+- A stale `.vercel/` folder can point at a deleted project; delete it and run `vercel link --yes --project fable-cms --scope the-fable-club`.
+- `x-vercel-error: DEPLOYMENT_NOT_FOUND` on a domain means the domain is attached but nothing has been deployed yet.
+- **NEXT_PUBLIC_ values are baked in at build time**: after adding or changing them, redeploy.
+- The Supabase integration in Vercel adds its own variables (`POSTGRES_*`, `SUPABASE_JWT_SECRET`, `SUPABASE_SECRET_KEY`, ...). The CMS does not read them; remove the unneeded ones from the project to keep database credentials out of places that don't need them.
+
