@@ -1,0 +1,79 @@
+import { createClient } from "@/lib/supabase/server";
+
+export const metadata = { title: "Dashboard" };
+
+const CONTENT_TABLES = ["events", "members", "aims", "club_settings"] as const;
+
+export default async function Dashboard() {
+  // The user's own session: row level security applies to every query below.
+  const supabase = await createClient();
+
+  const count = async (table: string, filter?: { col: string; gt?: string; eq?: string }) => {
+    let q = supabase.from(table).select("*", { count: "exact", head: true });
+    if (filter?.gt) q = q.gt(filter.col, filter.gt);
+    if (filter?.eq) q = q.eq(filter.col, filter.eq);
+    const { count: n } = await q;
+    return n ?? 0;
+  };
+
+  const { data: last } = await supabase
+    .from("releases")
+    .select("id, published_at, published_by")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const [events, members, aims, newApps, ...changed] = await Promise.all([
+    count("events"),
+    count("members"),
+    count("aims"),
+    count("applications", { col: "status", eq: "new" }),
+    // "Unpublished changes": rows edited since the last release (or everything, before the first one).
+    ...CONTENT_TABLES.map((t) => (last ? count(t, { col: "updated_at", gt: last.published_at }) : count(t))),
+  ]);
+  const unpublished = changed.reduce((a, b) => a + b, 0);
+
+  const cards = [
+    { label: "Events", value: events },
+    { label: "Members", value: members },
+    { label: "Aims", value: aims },
+    { label: "New applications", value: newApps },
+  ];
+
+  return (
+    <div className="space-y-10">
+      <section>
+        <h1 className="text-3xl font-semibold">Dashboard</h1>
+        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-4">
+          {cards.map((c) => (
+            <div key={c.label} className="bg-paper p-5">
+              <dt className="font-mono text-xs uppercase tracking-widest text-ink/60">{c.label}</dt>
+              <dd className="mt-2 text-4xl font-semibold tabular-nums">{c.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="border-2 border-ink p-6">
+        <h2 className="text-xl font-semibold">Publishing</h2>
+        <p className="mt-2 text-sm text-ink/70">
+          {last
+            ? `Last published ${new Date(last.published_at).toLocaleString("en-GB", { timeZone: "Asia/Kolkata" })} IST by @${last.published_by}.`
+            : "Nothing has been published yet."}{" "}
+          <strong className="text-ink">{unpublished}</strong> {unpublished === 1 ? "row has" : "rows have"} changed
+          since then.
+        </p>
+        <button
+          type="button"
+          disabled
+          className="mt-4 h-11 bg-ink px-6 font-medium text-paper disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Publish
+        </button>
+        <p className="mt-2 text-xs text-ink/50">
+          Publishing is the next step: it needs the Vercel deploy hook for the public site.
+        </p>
+      </section>
+    </div>
+  );
+}
