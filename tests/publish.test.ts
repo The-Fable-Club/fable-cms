@@ -105,3 +105,34 @@ describe("triggerDeploy (retry)", () => {
     expect(record).toHaveBeenCalledWith(3, "triggered");
   });
 });
+
+describe("republish (rollback)", () => {
+  const good = { schema_version: 1, generated_at: "2026-10-01T00:00:00.000Z", events: [], members: [] };
+  const withLoad = (load: () => Promise<unknown>) => {
+    const { d, calls } = deps();
+    return { d: { ...d, loadRelease: load as never }, calls };
+  };
+  it("publishes an old snapshot as a new release and rebuilds", async () => {
+    const { republish } = await import("@/lib/publish");
+    const { d, calls } = withLoad(async () => good);
+    const r = await republish(d, { by: "haise-727", releaseId: 3 });
+    expect(r).toMatchObject({ ok: true, releaseId: 7, deploy: "triggered" });
+    expect(calls.insert.mock.calls[0][0]).toMatchObject({ note: "Re-publish of release #3" });
+    expect(calls.hook).toHaveBeenCalled();
+  });
+  it("says so when the release does not exist, and refuses a snapshot the site could not read", async () => {
+    const { republish } = await import("@/lib/publish");
+    const missing = withLoad(async () => null);
+    expect(await republish(missing.d, { by: "x", releaseId: 99 })).toMatchObject({ ok: false, reason: "error" });
+    const bad = withLoad(async () => ({ ...good, schema_version: 99 }));
+    const r = await republish(bad.d, { by: "x", releaseId: 1 });
+    expect(r).toMatchObject({ ok: false, reason: "invalid" });
+    expect(bad.calls.insert).not.toHaveBeenCalled();
+  });
+  it("respects the one-per-minute limit", async () => {
+    const { republish } = await import("@/lib/publish");
+    const { d } = deps({ lastPublishedAt: async () => new Date("2026-10-17T09:59:50Z") });
+    const r = await republish({ ...d, loadRelease: async () => good as never }, { by: "x", releaseId: 1 });
+    expect(r).toMatchObject({ ok: false, reason: "rate_limited" });
+  });
+});

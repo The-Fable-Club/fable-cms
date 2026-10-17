@@ -1,4 +1,4 @@
-import type { Snapshot } from "@/lib/contract";
+import { Snapshot } from "@/lib/contract";
 import { buildSnapshot, type EventRow, type MemberRow, type Problem } from "@/lib/snapshot";
 
 /** Everything publish() touches, injected so the logic can be tested without a network. */
@@ -75,4 +75,35 @@ export async function triggerDeploy(deps: Pick<PublishDeps, "hookUrl" | "fetchHo
     /* the outcome is still returned to the person; only the stored label is missing */
   }
   return { deploy, ...(error ? { error } : {}) };
+}
+
+export type RepublishDeps = PublishDeps & { loadRelease: (id: number) => Promise<Snapshot | null> };
+
+/**
+ * Roll back: publish an older release again as a NEW release (history is never rewritten),
+ * then rebuild. The old snapshot is checked against today's contract first.
+ */
+export async function republish(deps: RepublishDeps, input: { by: string; releaseId: number }): Promise<PublishResult> {
+  try {
+    const last = await deps.lastPublishedAt();
+    if (last) {
+      const wait = MIN_SECONDS_BETWEEN_PUBLISHES - (deps.now().getTime() - last.getTime()) / 1000;
+      if (wait > 0) return { ok: false, reason: "rate_limited", retryAfterSeconds: Math.ceil(wait) };
+    }
+    const old = await deps.loadRelease(input.releaseId);
+    if (!old) return { ok: false, reason: "error", message: `Release #${input.releaseId} was not found.` };
+    const check = Snapshot.safeParse(old);
+    if (!check.success) {
+      return {
+        ok: false,
+        reason: "invalid",
+        problems: check.error.issues.slice(0, 10).map((i) => ({ entity: "release" as const, label: `Release #${input.releaseId}`, field: i.path.join("."), message: i.message })),
+      };
+    }
+    const { id } = await deps.insertRelease({ snapshot: check.data, note: `Re-publish of release #${input.releaseId}`, publishedBy: input.by });
+    const deploy = await triggerDeploy(deps, id);
+    return { ok: true, releaseId: id, counts: { events: check.data.events.length, members: check.data.members.length }, ...deploy };
+  } catch (e) {
+    return { ok: false, reason: "error", message: e instanceof Error ? e.message : String(e) };
+  }
 }
