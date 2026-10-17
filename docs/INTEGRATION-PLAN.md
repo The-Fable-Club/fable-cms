@@ -29,7 +29,7 @@ Every uncertain field uses one small control with a **mode** switch. Suggested d
 
 | Field | Modes |
 |---|---|
-| **Date** | **Exact** (start + optional end) · **Month only** (pick a month) · **Own text** (e.g. "Early February", with an optional month for timeline placement) · **To be announced** |
+| **Date** | **Exact** (start + optional end) · **Write my own** (e.g. "Early February", shown as written, optional hidden placeholder place) · **To be announced** (optional hidden placeholder place that positions it on the timeline; label stays "Date to be announced"). The old "Month only" option was removed on 2026-10-17; old releases that contain it still load. |
 | **Time** | **Time text** (e.g. "4:00 – 6:00 pm") · **To be announced** |
 | **Venue** | **Text** · **Online** · **To be announced** |
 | **Seats / who can join** | **Text** · **Open to all** · **To be announced** |
@@ -140,3 +140,5 @@ Built and committed, all with tests (CMS 81 unit tests, site 27):
 **Rules to keep following**: small focused commits, no Claude co-author trailer, secrets never in chat, user pushes (or consents to a push), max motion on the site.
 
 **Update 2026-10-17 (later):** `0005` applied; live security tests pass (20/20). Faculty and board imported into the database (`scripts/import-board.mts`) and published as release #7 BEFORE the site that reads them is pushed (otherwise the home people section would be empty). The publish drill (`tests/live/publish.live.test.ts`) proved add-event -> publish -> real rebuild -> event page and /events update; it is being re-run after the site push. `scripts/publish-now.mts` publishes from the command line.
+
+**Update 2026-10-17 (evening):** TBA / own-text dates can carry a hidden placeholder place (stored in `events.start_date`, no migration); People screen: nobody can change their own access level (enforced server-side); localhost site follows new releases (dev route polls Supabase every ~10s). Known: the seed script resets the placeholder events to their seed values, so test edits to placeholders are overwritten when it is re-run.

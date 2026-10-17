@@ -22,6 +22,7 @@ Being in the org or on the repo does **not** let anyone into the CMS. Signing in
 - **editor** (the database calls it `editor`): edit and publish. Cannot manage admins.
 - The `ADMIN_GITHUB_USERNAMES` value in `.env.local` is only a leftover note. The table decides.
 - Usernames are stored lower-case and matched lower-case.
+- Nobody can change their own access level (an owner cannot demote themselves); another owner has to do it. The last owner can never be removed or demoted.
 - To add or remove someone: the CMS **Admins** screen (owner only, being built), or in the Supabase SQL editor: `insert into admins (github_username, role, added_by) values ('name', 'editor', 'your-name');`
 
 ## GitHub (as of 2026-10-17)
