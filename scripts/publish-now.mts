@@ -3,7 +3,7 @@
 //   npx tsx scripts/publish-now.mts "note about this release"
 import { resolve } from "node:path";
 import { publish, type PublishDeps } from "../src/lib/publish";
-import type { EventRow, MemberRow } from "../src/lib/snapshot";
+import type { EventRow, MemberRow, QuestionRow } from "../src/lib/snapshot";
 
 process.loadEnvFile(resolve(import.meta.dirname, "../.env.local"));
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -22,7 +22,12 @@ const rest = async (path: string, init: RequestInit = {}) => {
 const deps: PublishDeps = {
   supabaseUrl: URL,
   now: () => new Date(),
-  loadRows: async () => ({ events: (await rest("events?select=*")) as EventRow[], members: (await rest("members?select=*")) as MemberRow[] }),
+  loadRows: async () => ({
+    events: (await rest("events?select=*")) as EventRow[],
+    members: (await rest("members?select=*")) as MemberRow[],
+    // missing before migration 0007: publish without an FAQ
+    questions: ((await rest("event_questions?select=id,created_at,event_slug,question,answer,show_on_site,hidden&show_on_site=eq.true").catch(() => [])) ?? []) as QuestionRow[],
+  }),
   lastPublishedAt: async () => {
     const rows = (await rest("releases?select=published_at&order=id.desc&limit=1")) as { published_at: string }[];
     return rows[0] ? new Date(rows[0].published_at) : null;

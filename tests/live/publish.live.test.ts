@@ -4,7 +4,7 @@
 // Adds one temporary event (slug zz-live-test) and removes it again, publishing both times.
 import { afterAll, describe, expect, it } from "vitest";
 import { publish, type PublishDeps } from "@/lib/publish";
-import type { EventRow, MemberRow } from "@/lib/snapshot";
+import type { EventRow, MemberRow, QuestionRow } from "@/lib/snapshot";
 
 process.loadEnvFile?.(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -31,6 +31,7 @@ const deps = (hookUrl: string | null): PublishDeps => ({
   loadRows: async () => ({
     events: await json<EventRow[]>(await rest("events?select=*")),
     members: await json<MemberRow[]>(await rest("members?select=*")),
+    questions: await json<QuestionRow[]>(await rest("event_questions?select=id,created_at,event_slug,question,answer,show_on_site,hidden&show_on_site=eq.true")).catch(() => []),
   }),
   lastPublishedAt: async () => {
     const rows = await json<{ published_at: string }[]>(await rest("releases?select=published_at&order=id.desc&limit=1"));

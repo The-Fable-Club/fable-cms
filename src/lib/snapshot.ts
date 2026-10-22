@@ -32,7 +32,28 @@ export type EventRow = {
   archived: boolean;
   /** Saved but not ready: never published. Creators can only save drafts; admins take them live. */
   draft?: boolean;
+  /** Official VIT EventHub page (migration 0007). */
+  eventhub_url?: string | null;
 };
+
+/** A question asked on the site (migration 0007). Only answered, shown, not-hidden ones reach the release. */
+export type QuestionRow = {
+  id: number;
+  created_at: string;
+  event_slug: string;
+  question: string;
+  answer: string | null;
+  show_on_site: boolean;
+  hidden: boolean;
+};
+
+/** The FAQ for one event: answered questions the club chose to show, oldest first. */
+export function faqFor(slug: string, questions: QuestionRow[]) {
+  return questions
+    .filter((q) => q.event_slug === slug && q.show_on_site && !q.hidden && blank(q.answer) !== null)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+    .map((q) => ({ question: q.question.trim(), answer: (q.answer ?? "").trim() }));
+}
 
 export type MemberRow = {
   id: number;
@@ -85,7 +106,7 @@ function hubItems(raw: unknown) {
     .sort((a, b) => String(b.posted_at).localeCompare(String(a.posted_at)));
 }
 
-export function eventCandidate(r: EventRow, supabaseUrl: string) {
+export function eventCandidate(r: EventRow, supabaseUrl: string, questions: QuestionRow[] = []) {
   const date =
     r.date_mode === "exact"
       ? { mode: "exact", start: r.start_date, end: r.end_date }
@@ -123,6 +144,8 @@ export function eventCandidate(r: EventRow, supabaseUrl: string) {
     art: r.art,
     photo: mediaUrl(supabaseUrl, r.photo_path),
     hub: hubItems(r.hub),
+    eventhub: blank(r.eventhub_url),
+    faq: faqFor(r.slug, questions),
   };
 }
 
@@ -171,7 +194,7 @@ function startOf(e: z.infer<typeof SnapshotEvent>): string {
  * is wrong nothing is built.
  */
 export function buildSnapshot(
-  rows: { events: EventRow[]; members: MemberRow[] },
+  rows: { events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[] },
   opts: { supabaseUrl: string; now?: Date },
 ): BuildResult {
   const problems: Problem[] = [];
@@ -179,7 +202,7 @@ export function buildSnapshot(
   const members: z.infer<typeof SnapshotMember>[] = [];
 
   for (const row of rows.events.filter((r) => !r.archived && !r.draft)) {
-    const parsed = SnapshotEvent.safeParse(eventCandidate(row, opts.supabaseUrl));
+    const parsed = SnapshotEvent.safeParse(eventCandidate(row, opts.supabaseUrl, rows.questions ?? []));
     if (parsed.success) events.push(parsed.data);
     else problems.push(...issuesToProblems("event", row.title || row.slug, parsed.error.issues));
   }

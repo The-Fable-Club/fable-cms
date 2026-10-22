@@ -1,11 +1,11 @@
 import { Snapshot } from "@/lib/contract";
-import { buildSnapshot, type EventRow, type MemberRow, type Problem } from "@/lib/snapshot";
+import { buildSnapshot, type EventRow, type MemberRow, type Problem, type QuestionRow } from "@/lib/snapshot";
 
 /** Everything publish() touches, injected so the logic can be tested without a network. */
 export type PublishDeps = {
   supabaseUrl: string;
   now: () => Date;
-  loadRows: () => Promise<{ events: EventRow[]; members: MemberRow[] }>;
+  loadRows: () => Promise<{ events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[] }>;
   lastPublishedAt: () => Promise<Date | null>;
   insertRelease: (r: { snapshot: Snapshot; note: string | null; publishedBy: string }) => Promise<{ id: number }>;
   /** null = no deploy hook configured. */

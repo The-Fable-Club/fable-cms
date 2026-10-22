@@ -123,3 +123,43 @@ describe("buildSnapshot", () => {
     expect(r.ok && r.snapshot.events).toEqual([]);
   });
 });
+
+describe("EventHub link and FAQ in the snapshot", () => {
+  const q = (o: Partial<import("@/lib/snapshot").QuestionRow> = {}) => ({
+    id: 1, created_at: "2026-10-20T10:00:00Z", event_slug: "prompt-workshop", question: " Is it free? ", answer: " Yes. ", show_on_site: true, hidden: false, ...o,
+  });
+  it("passes the EventHub link through and rejects a look-alike", () => {
+    const ok = build([ev({ eventhub_url: "https://eventhubcc.vit.ac.in/EventHub/e/1" })]);
+    expect(ok.ok && ok.snapshot.events[0].eventhub).toBe("https://eventhubcc.vit.ac.in/EventHub/e/1");
+    const none = build([ev({ eventhub_url: "  " })]);
+    expect(none.ok && none.snapshot.events[0].eventhub).toBeNull();
+    const bad = build([ev({ title: "Fake", eventhub_url: "https://eventhubcc.vit.ac.in.evil.example/x" })]);
+    expect(!bad.ok && bad.problems[0]).toMatchObject({ label: "Fake", field: "eventhub" });
+  });
+  it("publishes only answered, shown, not hidden questions for that event, oldest first, trimmed", () => {
+    const r = buildSnapshot(
+      {
+        events: [ev()],
+        members: [],
+        questions: [
+          q({ id: 2, created_at: "2026-10-21T10:00:00Z", question: "Second?", answer: "B" }),
+          q({ id: 1 }),
+          q({ id: 3, answer: null }),
+          q({ id: 4, answer: "  " }),
+          q({ id: 5, show_on_site: false }),
+          q({ id: 6, hidden: true }),
+          q({ id: 7, event_slug: "other-event" }),
+        ],
+      },
+      { supabaseUrl: URL, now },
+    );
+    expect(r.ok && r.snapshot.events[0].faq).toEqual([
+      { question: "Is it free?", answer: "Yes." },
+      { question: "Second?", answer: "B" },
+    ]);
+  });
+  it("works without any questions (before migration 0007)", () => {
+    const r = build([ev()]);
+    expect(r.ok && r.snapshot.events[0].faq).toEqual([]);
+  });
+});
