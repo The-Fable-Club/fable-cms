@@ -31,6 +31,16 @@ After people register and turn up, take **several attendance marks per event** (
 - **Who can do what:** decide which access level runs the door (probably **Member** for scanning/presenting, **Admin** for editing checkpoints and finalising OD). The current role system ([ACCESS.md](ACCESS.md)) supports adding this.
 - **Privacy:** attendance + reg numbers are personal data. Keep them out of releases (never published), readable only in the CMS, and decide how long to keep them.
 
+## The roster: who counts as "registered" (decided 2026-10-22)
+EventHub is the official registration, so the list of people who may get OD comes from **EventHub's CSV**, not from our own form. No student accounts on our site.
+
+- **Import:** an admin uploads the EventHub CSV for an event in the CMS. Rows become the event's **roster**, marked `source = eventhub`, with the import time, who imported it, and the file name. Re-importing a newer CSV adds new people and updates details without duplicating anyone (matched on registration number); nobody is silently deleted (people missing from a newer file are flagged for a human to decide).
+- **On-spot registrations:** added in the CMS at the event by staff, marked `source = onspot`, with the time and who added them. These are the only manual additions; each one is visible as such in the roster and in the OD report.
+- **Our own site form** (while it exists): its registrations can be shown next to the roster as `source = site`, but only EventHub and on-spot entries count for OD unless the club decides otherwise.
+- **Log of every change:** imports, on-spot additions, edits and removals each write an entry (who, what, when, before and after) to the audit log, so the final OD list can always be explained. The `audit_log` table already exists and is unused; this is the natural first user of it.
+- **Attendance marks** (above) are then taken against the roster.
+- **Needed before building:** a sample of the EventHub CSV (column headers, with fake rows) and the format the university wants for OD, so the import and the export match them exactly.
+
 ## Open questions for the club
 - Which checkpoints count for OD, and does missing one cancel OD or reduce it?
 - Will volunteers be available at the door for an ID check?

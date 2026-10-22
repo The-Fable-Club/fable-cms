@@ -14,8 +14,9 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 ### Not done yet (backend)
 | Item | Notes |
 |---|---|
+| College-format fields | The club wants event and member details adjusted to the college's formats; needs the list of fields first. |
 | Media (photos) end to end | Upload control, WebP resize, bucket and rules exist. Needs one real upload test in a signed-in browser. You said later. |
-| Participant hub privacy | Hub pages are public to anyone with the link (no per-participant login). Fine for links and announcements; do not post anything private. A real fix is a participant login or a shared event code. |
+| Participant hub privacy | Decided to stay public (no student accounts), so participants can download materials. Do not post anything private in a hub. |
 | Club text and aims in the CMS | They live in `content/club.json` and `aims.json` in the site repo (edit and push). The tables exist; a screen is a small job. |
 | Organisation check at sign-in | Optional hardening: also require current GitHub org membership. Needs a server-side GitHub token. |
 | Capacity and waitlists | "Seats" is text only. Registrations are not capped. |
@@ -24,8 +25,8 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Soft 404 | `/events/<unknown>` answers HTTP 200 with a not-found page (a Next.js streaming detail). |
 | Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
 | Audit log | The table exists; nothing writes to it yet. Releases already record who published. |
-| Event attendance for OD | Several marks per event (arrival, mid, exit, end), proxy-resistant. **Feasible; not planned yet** (a club member is taking it on). See [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md). |
-| Official VIT EventHub registration | Decided: we link to each event's official EventHub page and never handle VTOP credentials or payments; our own form stays for on-spot sign-ups. **Planned, not built** (migration 0007 + one CMS field + a site button). Plan and the conditions for any deeper integration: [EVENTHUB.md](EVENTHUB.md). |
+| Event attendance for OD | Feasible, not built. Roster = the EventHub CSV imported in the CMS + on-spot additions entered in the CMS, every change logged (who, when, source). Needs a sample EventHub CSV and the university OD format first. [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md) |
+| Official VIT EventHub registration | Decided: link to each event's official EventHub page; no VTOP credentials, payments, deeper integration or student accounts; the participant hub stays public; our own form stays for now. **Link planned, not built** (migration 0007 + one CMS field + a site button). [EVENTHUB.md](EVENTHUB.md) |
 
 ### Done
 Data contract and date rules (mutation tested) · snapshot builder · publish, retry and rollback · drafts · four access levels (app side, database side written) · events and people screens · applications and registrations (inbox, status, notes, CSV) · People screen with safety rules · live security and publish tests · live site wired to the database.
