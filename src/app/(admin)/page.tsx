@@ -21,6 +21,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     return n ?? 0;
   };
 
+  // Unanswered, not hidden (0 before migration 0007).
+  const countNewQuestions = async () => {
+    const { count: n } = await supabase.from("event_questions").select("*", { count: "exact", head: true }).is("answer", null).eq("hidden", false);
+    return n ?? 0;
+  };
+
   const { data: last } = await supabase
     .from("releases")
     .select("id, published_at, published_by")
@@ -28,12 +34,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .limit(1)
     .maybeSingle();
 
-  const [events, members, aims, newApps, newRegs, ...changed] = await Promise.all([
+  const [events, members, aims, newApps, newRegs, newQs, ...changed] = await Promise.all([
     count("events"),
     count("members"),
     count("aims"),
     count("applications", { col: "status", eq: "new" }),
     count("registrations", { col: "status", eq: "new" }),
+    countNewQuestions(),
     // "Unpublished changes": rows edited since the last release (or everything, before the first one).
     ...CONTENT_TABLES.map((t) => (last ? count(t, { col: "updated_at", gt: last.published_at }) : count(t))),
   ]);
@@ -44,6 +51,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     ...(can(admin.role, "manage_members") ? [{ label: "Members", value: members }, { label: "Aims", value: aims }] : []),
     { label: "New applications", value: newApps },
     { label: "New registrations", value: newRegs },
+    { label: "Unanswered questions", value: newQs },
   ];
 
   return (
@@ -58,7 +66,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <p className="mt-1 text-sm text-ink/60">
           Signed in as {ROLE_INFO[admin.role].label}. {ROLE_INFO[admin.role].summary}
         </p>
-        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-2 lg:grid-cols-5">
+        <dl className="mt-6 grid gap-px border-2 border-ink bg-ink sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => (
             <div key={c.label} className="bg-paper p-5">
               <dt className="font-mono text-xs uppercase tracking-widest text-ink/60">{c.label}</dt>
