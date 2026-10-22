@@ -140,4 +140,5 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | Media (photos) | Bucket, rules and the upload control are built; not exercised end to end yet. |
 | VIT EventHub | Official registration stays on EventHub; we link to it per event (planned, [EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
 | Attendance for OD | Feasible, not planned yet: [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md). |
+| Event questions / FAQ | Planned: [EVENT-QA.md](EVENT-QA.md). |
 | Backend overall | **Functionally complete** apart from the items under "Not done yet" in [ROADMAP.md](ROADMAP.md). |
