@@ -24,6 +24,8 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Soft 404 | `/events/<unknown>` answers HTTP 200 with a not-found page (a Next.js streaming detail). |
 | Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
 | Audit log | The table exists; nothing writes to it yet. Releases already record who published. |
+| Event attendance for OD | Several marks per event (arrival, mid, exit, end), proxy-resistant. **Feasible; not planned yet** (a club member is taking it on). See [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md). |
+| Official VIT EventHub registration | VIT requires registration on EventHub (VTOP login, payments, teams). **We do not rebuild, proxy or embed it, and never handle VTOP credentials or payments.** The site links people to the official EventHub page for the event; our own registration form stays optional (useful for on-spot sign-ups and our own counts). Revisit only if VIT offers an official API or embed.
 
 ### Done
 Data contract and date rules (mutation tested) · snapshot builder · publish, retry and rollback · drafts · four access levels (app side, database side written) · events and people screens · applications and registrations (inbox, status, notes, CSV) · People screen with safety rules · live security and publish tests · live site wired to the database.
