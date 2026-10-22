@@ -21,11 +21,14 @@ export function roleFromRank(rank: number | null | undefined): Role | null {
 /** The lowest role allowed to do each thing. */
 export const MIN_ROLE = {
   read_signups: "member", // applications and registrations: view and download
+  read_questions: "member", // questions asked under events
+  answer_questions: "creator", // write or edit an answer (not shown until an admin says so)
   edit_draft_events: "creator", // create events, edit events that are still drafts
   upload_media: "creator",
   edit_live_events: "admin", // change or delete an event that is not a draft, and take a draft live
   manage_members: "admin", // the people shown on the site
   triage_signups: "admin", // change status and notes on applications and registrations
+  moderate_questions: "admin", // show an answer on the site, hide, email the asker, delete
   publish: "admin",
   view_releases: "admin",
   rollback: "owner", // retry a rebuild, publish an old release again
@@ -52,6 +55,7 @@ export const NAV: { href: string; label: string; action: Action }[] = [
   { href: "/members", label: "Members", action: "manage_members" },
   { href: "/applications", label: "Applications", action: "read_signups" },
   { href: "/registrations", label: "Registrations", action: "read_signups" },
+  { href: "/questions", label: "Questions", action: "read_questions" },
   { href: "/releases", label: "Releases", action: "view_releases" },
   { href: "/admins", label: "People", action: "manage_people" },
 ];

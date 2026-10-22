@@ -27,9 +27,9 @@ describe("permissions", () => {
   });
   it("matches the agreed matrix exactly", () => {
     const table: Record<Role, Action[]> = {
-      member: ["read_signups"],
-      creator: ["read_signups", "edit_draft_events", "upload_media"],
-      admin: ["read_signups", "edit_draft_events", "upload_media", "edit_live_events", "manage_members", "triage_signups", "publish", "view_releases"],
+      member: ["read_signups", "read_questions"],
+      creator: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions"],
+      admin: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions", "edit_live_events", "manage_members", "triage_signups", "moderate_questions", "publish", "view_releases"],
       owner: actions,
     };
     for (const r of ROLES) expect(actions.filter((a) => can(r, a)).sort(), r).toEqual([...table[r]].sort());
@@ -69,9 +69,9 @@ describe("canSaveEvent", () => {
 describe("navigation", () => {
   const links = (r: Role) => navFor(r).map((n) => n.label);
   it("shows each role only what it can use", () => {
-    expect(links("member")).toEqual(["Dashboard", "Applications", "Registrations"]);
-    expect(links("creator")).toEqual(["Dashboard", "Events", "Applications", "Registrations"]);
-    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Releases"]);
-    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Releases", "People"]);
+    expect(links("member")).toEqual(["Dashboard", "Applications", "Registrations", "Questions"]);
+    expect(links("creator")).toEqual(["Dashboard", "Events", "Applications", "Registrations", "Questions"]);
+    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Releases"]);
+    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Releases", "People"]);
   });
 });
