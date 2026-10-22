@@ -202,6 +202,14 @@ export function EventForm({ action, event, author, role }: Props) {
         />
       </div>
 
+      <Field
+        label="Official EventHub link"
+        hint="The event's page on eventhubcc.vit.ac.in. When set, the site shows a Register on EventHub button until the event is over. Our own form (above) can stay on for on-spot sign-ups."
+        error={err.eventhub_url}
+      >
+        <input name="eventhub_url" type="url" defaultValue={e.eventhub_url ?? ""} placeholder="https://eventhubcc.vit.ac.in/EventHub/…" className={inputCls} {...bad("eventhub_url")} />
+      </Field>
+
       <Field label="Description" hint="Separate paragraphs with an empty line." error={err.description}>
         <textarea name="description" defaultValue={e.description} rows={7} className={`${inputCls} h-auto py-2`} />
       </Field>

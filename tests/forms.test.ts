@@ -139,3 +139,24 @@ describe("parseMemberForm", () => {
     expect(!r.ok && r.errors.name).toBeTruthy();
   });
 });
+
+describe("EventHub link on the event form", () => {
+  const fd2 = (o: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries({ title: "T", kind: "Workshop", phase: "1", date_mode: "tba", time_mode: "tba", venue_mode: "tba", seats_mode: "open", apply_mode: "none", summary: "s", ...o })) f.set(k, v);
+    return f;
+  };
+  it("keeps a real EventHub link and empties a blank one", () => {
+    const ok = parseEventForm(fd2({ eventhub_url: " https://eventhubcc.vit.ac.in/EventHub/e/9 " }));
+    expect(ok.ok && ok.row.eventhub_url).toBe("https://eventhubcc.vit.ac.in/EventHub/e/9");
+    const blank = parseEventForm(fd2({ eventhub_url: "" }));
+    expect(blank.ok && blank.row.eventhub_url).toBeNull();
+  });
+  it("refuses anything that is not the real EventHub, on the right field", () => {
+    for (const bad of ["http://eventhubcc.vit.ac.in/x", "https://eventhubcc.vit.ac.in.evil.example/x", "https://forms.gle/abc"]) {
+      const r = parseEventForm(fd2({ eventhub_url: bad }));
+      expect(r.ok, bad).toBe(false);
+      expect(!r.ok && r.errors.eventhub_url, bad).toBeTruthy();
+    }
+  });
+});

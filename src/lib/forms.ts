@@ -23,7 +23,7 @@ export const slugify = (s: string) =>
 // zod issue path -> the form field it belongs to
 const EVENT_FIELD: Record<string, string> = {
   "date.start": "start_date", "date.end": "end_date", "date.month": "date_month", "date.text": "date_text", "date.place": "date_place", date: "date_mode",
-  "time.text": "time_text", "venue.text": "venue", "seats.text": "seats", "apply.url": "apply_url",
+  "time.text": "time_text", "venue.text": "venue", "seats.text": "seats", "apply.url": "apply_url", eventhub: "eventhub_url",
 };
 const MEMBER_FIELD: Record<string, string> = {
   "year.text": "year_text", "links.email": "email", "links.linkedin": "linkedin", "links.github": "github",
@@ -85,6 +85,7 @@ export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co
     hub,
     archived: f.get("archived") === "on",
     draft: f.get("draft") === "on",
+    eventhub_url: orNull(str(f, "eventhub_url")),
   };
 
   const check = SnapshotEvent.safeParse(eventCandidate({ ...row, id: 0 }, supabaseUrl));
