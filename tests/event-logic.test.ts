@@ -124,3 +124,17 @@ describe("placeholder placement (TBA / own text with a hidden place)", () => {
     expect(deriveStatus(tbaAt, "2027-02-11", "upcoming")).toBe("upcoming");
   });
 });
+
+describe("registration with an EventHub link", () => {
+  it("is open until the event is past, whatever our own form says", () => {
+    for (const mode of ["none", "soon", "closed", "form"] as const) {
+      expect(registrationState({ mode }, "upcoming", true)).toBe("open");
+      expect(registrationState({ mode }, "active", true)).toBe("open");
+      expect(registrationState({ mode }, "past", true)).toBe("closed");
+    }
+  });
+  it("without a link, behaves as before", () => {
+    expect(registrationState({ mode: "soon" }, "upcoming")).toBe("soon");
+    expect(registrationState({ mode: "none" }, "upcoming", false)).toBe("none");
+  });
+});

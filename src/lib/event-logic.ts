@@ -72,8 +72,12 @@ export function dateLabel(date: DateInfo): string {
   }
 }
 
-/** What the register / apply control should do right now. */
-export function registrationState(apply: ApplyInfo, status: EventStatus): RegistrationState {
+/**
+ * What the register / apply control should do right now.
+ * An official EventHub link means registration is open until the event is over, whatever our own form is set to.
+ */
+export function registrationState(apply: ApplyInfo, status: EventStatus, hasEventhub = false): RegistrationState {
+  if (hasEventhub) return status === "past" ? "closed" : "open";
   if (apply.mode === "none") return "none";
   if (apply.mode === "closed" || status === "past") return "closed";
   if (apply.mode === "soon") return "soon";

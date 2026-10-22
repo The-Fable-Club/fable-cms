@@ -29,6 +29,21 @@ const httpUrl = z
   .url("Must be a full link starting with https://")
   .refine((u) => /^https?:\/\//i.test(u), "Must start with http:// or https://");
 
+/** The official VIT registration site. Only links to this exact host are accepted, so a look-alike cannot be published. */
+export const EVENTHUB_HOST = "eventhubcc.vit.ac.in";
+export const eventhubUrl = z
+  .string()
+  .url("Must be a full link starting with https://")
+  .max(500)
+  .refine((u) => {
+    try {
+      const x = new URL(u);
+      return x.protocol === "https:" && x.hostname === EVENTHUB_HOST;
+    } catch {
+      return false;
+    }
+  }, `Must be an https:// link on ${EVENTHUB_HOST}`);
+
 // ---------------------------------------------------------------------------
 // "Not decided yet" details. Each uncertain field carries a mode, so the site
 // always knows whether it has a real value, a placeholder or nothing.
@@ -95,6 +110,10 @@ export const HubItem = z.object({
 });
 export type HubItem = z.infer<typeof HubItem>;
 
+/** An answered question the club chose to show on the event page. */
+export const FaqItem = z.object({ question: shortText(500), answer: shortText(2000) });
+export type FaqItem = z.infer<typeof FaqItem>;
+
 export const EventStatusOverride = z.enum(["active", "upcoming", "past"]);
 
 export const SnapshotEvent = z.object({
@@ -114,6 +133,10 @@ export const SnapshotEvent = z.object({
   art: slugStr,
   photo: httpUrl.nullable(),
   hub: z.array(HubItem).max(60),
+  // Added later; defaults keep older releases readable.
+  /** The event's page on VIT EventHub, the official registration. */
+  eventhub: eventhubUrl.nullable().default(null),
+  faq: z.array(FaqItem).max(50).default([]),
 });
 export type SnapshotEvent = z.infer<typeof SnapshotEvent>;
 

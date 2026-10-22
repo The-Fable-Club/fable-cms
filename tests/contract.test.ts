@@ -157,3 +157,30 @@ describe("placeholder placement in the contract", () => {
   });
   it("still reads the legacy month mode", () => passes(DateInfo, { mode: "month", month: "2027-02" }));
 });
+
+describe("EventHub link and FAQ", () => {
+  it("accepts only https links on the real EventHub host", () => {
+    passes(SnapshotEvent, event({ eventhub: "https://eventhubcc.vit.ac.in/EventHub/event/123" }));
+    passes(SnapshotEvent, event({ eventhub: null }));
+    for (const bad of [
+      "http://eventhubcc.vit.ac.in/EventHub/",
+      "https://eventhubcc.vit.ac.in.evil.example/",
+      "https://evil.example/eventhubcc.vit.ac.in",
+      "https://eventhub.vit.ac.in/",
+      "https://user@evil.example/",
+      "javascript:alert(1)",
+      "not a url",
+    ])
+      fails(SnapshotEvent, event({ eventhub: bad }));
+  });
+  it("defaults both fields so older releases still read", () => {
+    const r = SnapshotEvent.safeParse(event());
+    expect(r.success && r.data.eventhub).toBeNull();
+    expect(r.success && r.data.faq).toEqual([]);
+  });
+  it("validates FAQ items", () => {
+    passes(SnapshotEvent, event({ faq: [{ question: "Is it free?", answer: "Yes." }] }));
+    fails(SnapshotEvent, event({ faq: [{ question: "", answer: "Yes." }] }));
+    fails(SnapshotEvent, event({ faq: [{ question: "Q?", answer: "x".repeat(2001) }] }));
+  });
+});
