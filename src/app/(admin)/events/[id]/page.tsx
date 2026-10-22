@@ -17,11 +17,10 @@ export default async function EditEvent({ params }: { params: Promise<{ id: stri
   const { data } = await supabase.from("events").select("*").eq("id", num).maybeSingle();
   if (!data) notFound();
   const { id: _id, ...event } = data as EventRow;
-  const clicks = await supabase.from("event_clicks").select("day, clicks").eq("event_slug", event.slug).order("day", { ascending: false });
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Edit event</h1>
-      <PosterPanel slug={event.slug} eventhubUrl={event.eventhub_url ?? null} clicks={clicks.error ? null : ((clicks.data ?? []) as { day: string; clicks: number }[])} />
+      <PosterPanel slug={event.slug} eventhubUrl={event.eventhub_url ?? null} />
       <EventForm action={saveEventAction.bind(null, num)} event={event} author={admin.username} role={admin.role} />
     </div>
   );

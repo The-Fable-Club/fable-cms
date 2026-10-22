@@ -1,4 +1,4 @@
--- 0007: the official EventHub link, a privacy-free click counter, and event questions (FAQ).
+-- 0007: the official EventHub link and event questions (FAQ).
 -- NOT YET APPLIED. Run after 0001-0006. Safe to run more than once.
 -- Plans: docs/EVENTHUB.md, docs/EVENT-QA.md.
 
@@ -8,33 +8,6 @@ alter table events add column if not exists eventhub_url text;
 alter table events drop constraint if exists events_eventhub_url_check;
 alter table events add constraint events_eventhub_url_check
   check (eventhub_url is null or (eventhub_url ~ '^https://eventhubcc\.vit\.ac\.in(/|$)' and char_length(eventhub_url) <= 500));
-
--- ============================================================ click counter
--- Numbers only: clicks per event per day. No IP, no cookie, no person.
-create table if not exists event_clicks (
-  event_slug text not null,
-  day        date not null,
-  clicks     int  not null default 0,
-  primary key (event_slug, day)
-);
-alter table event_clicks enable row level security;
-drop policy if exists staff_read on event_clicks;
-create policy staff_read on event_clicks for select to authenticated using (role_rank() >= 1);
-revoke all on event_clicks from anon;
-
--- The only way to add a click. Counts only live events that have an EventHub link.
-create or replace function public.count_eventhub_click(p_slug text) returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  if not exists (select 1 from events e where e.slug = p_slug and e.eventhub_url is not null and not e.archived and not e.draft) then
-    return;
-  end if;
-  insert into event_clicks (event_slug, day, clicks)
-  values (p_slug, (now() at time zone 'Asia/Kolkata')::date, 1)
-  on conflict (event_slug, day) do update set clicks = least(event_clicks.clicks + 1, 1000000);
-end $$;
-revoke all on function public.count_eventhub_click(text) from public;
-grant execute on function public.count_eventhub_click(text) to anon, authenticated;
 
 -- ============================================================ event questions
 create table if not exists event_questions (

@@ -23,18 +23,15 @@ Our site is the front door for every event; EventHub is only where the official 
 
 1. **Poster:** carries a QR code and a short link, `thefableclub.com/e/<event-slug>`, which redirects to the event page. The CMS shows the short link and a downloadable QR (PNG/SVG) on each event, ready for the poster.
 2. **Event page:** everything a student needs (details, time, venue, what to bring), plus the participant hub with materials.
-3. **"Register on EventHub" button:** goes through a tiny redirect on our site, `/go/<event-slug>`, which adds one to a counter and forwards to that event's EventHub page.
-   - The counter stores **only numbers** (clicks per event per day): no IP address, no cookie, no reg number. It is an early signal of interest, **not** a registration count.
-   - The redirect only ever forwards to the event's saved `eventhub_url` (which must be on `eventhubcc.vit.ac.in`), so it cannot be abused as an open redirect.
-   - The CMS shows the counts on the event and on the dashboard.
+3. **"Register on EventHub" button:** goes straight to that event's EventHub page (new tab). Nothing is counted or stored: a click counter was built and then removed on 2026-10-22, because clicks are not registrations and the writes were not worth it.
 
-Where it lives: CMS event form field and the "For the poster" panel on each event (QR as PNG/SVG, click counts); site `/e/<slug>` (redirect in `next.config.ts`), `/go/<slug>` (`src/app/go/[slug]/route.ts`, `src/lib/clicks.ts`); database `events.eventhub_url`, `event_clicks`, `count_eventhub_click()`.
+Where it lives: CMS event form field and the "For the poster" panel on each event (QR as PNG/SVG); site `/e/<slug>` (redirect in `next.config.ts`) and the button on the event page (`eventhubTarget()` in `src/lib/events.ts`); database `events.eventhub_url`.
 
 ## Can we know who registered on EventHub before event day?
 **Not reliably, without access to EventHub's own data.** Only EventHub knows who completed registration (and payment). Options, best first:
 
 1. **Ask for earlier exports or organiser access.** If EventHub (or the club's faculty coordinator account) can download the registrant list before event day, import it whenever available (the import below is built to be repeated). This is the only option that is actually verified.
-2. **Not doing:** self-confirmation on our site (decided against, 2026-10-22; registration is only confirmed on event day from the CSV). The click counter above is the early signal instead.
+2. **Not doing:** self-confirmation on our site (decided against, 2026-10-22; registration is only confirmed on event day from the CSV).
 3. **Don't**: ask students to upload screenshots or receipts (personal data, storage, easy to fake) or log in to EventHub on their behalf.
 
 VTOP/EventHub has no API for confirmations, so the official CSV on event day is the source of truth.

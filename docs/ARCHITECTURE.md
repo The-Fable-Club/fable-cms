@@ -69,7 +69,7 @@ Events change status by themselves as dates pass (the site recomputes Live / Ope
 
 ### B2. Questions and the EventHub button (migration 0007)
 - **Questions:** the event page posts to `/api/questions` (same guards as the other forms) and inserts into `event_questions` (insert only; the database refuses answers, publishing or hiding from the public). Staff answer in the CMS; admins choose what is shown, and shown answers go out as the event's FAQ with the next Publish. Optional answer emails go through Resend (`RESEND_API_KEY`, `MAIL_FROM`); the address is deleted once sent.
-- **EventHub button:** links to `/go/<slug>` on our site, which calls `count_eventhub_click()` (numbers only: clicks per event per day) and forwards to the event's saved EventHub link. The link can only be on `eventhubcc.vit.ac.in` (checked in the contract, the database and the redirect). Posters use `/e/<slug>`, a plain redirect to the event page.
+- **EventHub button:** links straight to the event's saved EventHub page (no counting, no database write). The link can only be on `eventhubcc.vit.ac.in` (checked in the contract, the database and again when the page is built). Posters use `/e/<slug>`, a plain redirect to the event page.
 
 ### C. Signing in to the CMS
 GitHub login through Supabase Auth. The CMS never trusts the browser: on every page, action and download it asks the database for the caller's level (`role_rank()`), which reads the GitHub username that GitHub itself set (not editable by the user) and looks it up in the `admins` table. Someone who is in the GitHub organisation, or has repo access, but is not in `admins` gets nothing.
@@ -143,7 +143,7 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | CMS screens | Events (with drafts), members, applications, registrations, releases, people, dashboard. |
 | Access levels | **Built; migration 0006 must be applied** (SQL editor) before the four levels exist in the database. Until then the CMS falls back to owner/admin. |
 | Media (photos) | Bucket, rules and the upload control are built; not exercised end to end yet. |
-| VIT EventHub | Built (migration 0007): per-event link, poster short link + QR, click counter ([EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
+| VIT EventHub | Built (migration 0007): per-event link, poster short link + QR ([EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
 | Attendance for OD | Screens only, no backend ([ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md)). |
 | Event questions / FAQ | Built (migration 0007): [EVENT-QA.md](EVENT-QA.md). |
 | Backend overall | **Functionally complete** apart from the items under "Not done yet" in [ROADMAP.md](ROADMAP.md). |

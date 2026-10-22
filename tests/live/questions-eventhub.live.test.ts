@@ -1,6 +1,6 @@
-// LIVE: migration 0007 on the real database, using the PUBLIC key like a visitor's browser.
+// LIVE: migration 0007 (EventHub link, questions) on the real database, using the PUBLIC key like a visitor's browser.
 // Skipped until 0007 is applied. Test rows use zz-test- and are removed afterwards; the event's
-// EventHub link and today's click count are put back as they were.
+// EventHub link is put back as it was.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 process.loadEnvFile?.(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
@@ -20,18 +20,14 @@ const anon = (p: string, i?: RequestInit) => call(ANON, p, i);
 const service = (p: string, i?: RequestInit) => call(SERVICE, p, i);
 const code = async (r: Response) => (r.ok ? "ok" : (((await r.json()) as { code?: string }).code ?? String(r.status)));
 const ask = (o: Record<string, unknown>) => anon("event_questions", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ event_slug: EVENT, question: "Is this a live test question?", ...o }) });
-const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
 
 const applied = await service("event_questions?select=id&limit=1").then((r) => r.ok).catch(() => false);
 let savedLink: string | null = null;
-let savedClicks: number | null = null;
 
 beforeAll(async () => {
   if (!applied) return;
   const ev = (await (await service(`events?slug=eq.${EVENT}&select=eventhub_url`)).json()) as { eventhub_url: string | null }[];
   savedLink = ev[0]?.eventhub_url ?? null;
-  const c = (await (await service(`event_clicks?event_slug=eq.${EVENT}&day=eq.${today}&select=clicks`)).json()) as { clicks: number }[];
-  savedClicks = c[0]?.clicks ?? null;
 });
 
 afterAll(async () => {
@@ -39,8 +35,6 @@ afterAll(async () => {
   await service("event_questions?email=like.zz-test-*", { method: "DELETE" });
   await service("event_questions?question=like.*live%20test*", { method: "DELETE" });
   await service(`events?slug=eq.${EVENT}`, { method: "PATCH", body: JSON.stringify({ eventhub_url: savedLink }) });
-  if (savedClicks === null) await service(`event_clicks?event_slug=eq.${EVENT}&day=eq.${today}`, { method: "DELETE" });
-  else await service(`event_clicks?event_slug=eq.${EVENT}&day=eq.${today}`, { method: "PATCH", body: JSON.stringify({ clicks: savedClicks }) });
 });
 
 describe.skipIf(!applied)("event questions", () => {
@@ -73,26 +67,10 @@ describe.skipIf(!applied)("event questions", () => {
   });
 });
 
-describe.skipIf(!applied)("EventHub link and click counter", () => {
-  const clicks = async () => ((await (await service(`event_clicks?event_slug=eq.${EVENT}&day=eq.${today}&select=clicks`)).json()) as { clicks: number }[])[0]?.clicks ?? 0;
-  const press = () => anon("rpc/count_eventhub_click", { method: "POST", body: JSON.stringify({ p_slug: EVENT }) });
-
+describe.skipIf(!applied)("EventHub link", () => {
   it("the database only accepts real EventHub links", async () => {
     for (const bad of ["http://eventhubcc.vit.ac.in/x", "https://eventhubcc.vit.ac.in.evil.example/x", "https://evil.example/"])
       expect(await code(await service(`events?slug=eq.${EVENT}`, { method: "PATCH", body: JSON.stringify({ eventhub_url: bad }) })), bad).toBe("23514");
     expect(await code(await service(`events?slug=eq.${EVENT}`, { method: "PATCH", body: JSON.stringify({ eventhub_url: "https://eventhubcc.vit.ac.in/EventHub/" }) }))).toBe("ok");
-  });
-  it("a press is counted, numbers only, for an event with a link", async () => {
-    const before = await clicks();
-    expect((await press()).ok).toBe(true);
-    expect((await press()).ok).toBe(true);
-    expect(await clicks()).toBe(before + 2);
-  });
-  it("events without a link are not counted, and the public cannot read the counts", async () => {
-    await anon("rpc/count_eventhub_click", { method: "POST", body: JSON.stringify({ p_slug: "placeholder-date-tba" }) });
-    const r = (await (await service(`event_clicks?event_slug=eq.placeholder-date-tba&select=clicks`)).json()) as unknown[];
-    expect(r.length).toBe(0);
-    const pub = await anon("event_clicks?select=*");
-    expect(pub.ok ? ((await pub.json()) as unknown[]).length : 0).toBe(0);
   });
 });
