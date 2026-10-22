@@ -69,9 +69,9 @@ describe("canSaveEvent", () => {
 describe("navigation", () => {
   const links = (r: Role) => navFor(r).map((n) => n.label);
   it("shows each role only what it can use", () => {
-    expect(links("member")).toEqual(["Dashboard", "Applications", "Registrations", "Questions"]);
-    expect(links("creator")).toEqual(["Dashboard", "Events", "Applications", "Registrations", "Questions"]);
-    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Releases"]);
-    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Releases", "People"]);
+    expect(links("member")).toEqual(["Dashboard", "Applications", "Registrations", "Questions", "Attendance"]);
+    expect(links("creator")).toEqual(["Dashboard", "Events", "Applications", "Registrations", "Questions", "Attendance"]);
+    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases"]);
+    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases", "People"]);
   });
 });

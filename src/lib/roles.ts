@@ -56,6 +56,7 @@ export const NAV: { href: string; label: string; action: Action }[] = [
   { href: "/applications", label: "Applications", action: "read_signups" },
   { href: "/registrations", label: "Registrations", action: "read_signups" },
   { href: "/questions", label: "Questions", action: "read_questions" },
+  { href: "/attendance", label: "Attendance", action: "read_signups" }, // UI only for now
   { href: "/releases", label: "Releases", action: "view_releases" },
   { href: "/admins", label: "People", action: "manage_people" },
 ];
