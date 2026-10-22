@@ -67,6 +67,10 @@ Events change status by themselves as dates pass (the site recomputes Live / Ope
 4. The database has the last word: `registrations` only accepts an event that currently takes registrations (`event_accepts_registrations()`), refuses duplicates (one per email per event), and a trigger limits each email to 3 per hour and everyone to 500 (applications: 300) per hour.
 5. Editors see the rows in the CMS (Applications / Registrations), can set a status and notes (admins and owners), and download a CSV.
 
+### B2. Questions and the EventHub button (migration 0007)
+- **Questions:** the event page posts to `/api/questions` (same guards as the other forms) and inserts into `event_questions` (insert only; the database refuses answers, publishing or hiding from the public). Staff answer in the CMS; admins choose what is shown, and shown answers go out as the event's FAQ with the next Publish. Optional answer emails go through Resend (`RESEND_API_KEY`, `MAIL_FROM`); the address is deleted once sent.
+- **EventHub button:** links to `/go/<slug>` on our site, which calls `count_eventhub_click()` (numbers only: clicks per event per day) and forwards to the event's saved EventHub link. The link can only be on `eventhubcc.vit.ac.in` (checked in the contract, the database and the redirect). Posters use `/e/<slug>`, a plain redirect to the event page.
+
 ### C. Signing in to the CMS
 GitHub login through Supabase Auth. The CMS never trusts the browser: on every page, action and download it asks the database for the caller's level (`role_rank()`), which reads the GitHub username that GitHub itself set (not editable by the user) and looks it up in the `admins` table. Someone who is in the GitHub organisation, or has repo access, but is not in `admins` gets nothing.
 
@@ -112,6 +116,7 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | `SUPABASE_SERVICE_ROLE_KEY` (the secret key) | CMS `.env.local` and CMS Vercel only | **Yes.** Never on the public site, never in chat. Used only by local maintenance scripts and tests; the CMS app itself acts as the signed-in person. |
 | `VERCEL_DEPLOY_HOOK_URL` | CMS Vercel and CMS `.env.local` only | **Yes.** |
 | `DATABASE_URL` (direct Postgres string) | CMS `.env.local`, optional | **Yes.** Only for `scripts/db.mjs` and the role tests. |
+| `RESEND_API_KEY`, `MAIL_FROM` | CMS only, optional | Key is **secret**. For emailing answers to questions; without them the CMS offers a mailto link. |
 
 ## 7. Security summary
 - Row level security on every table; the public key can read exactly one thing (the newest release) and INSERT into two tables.
@@ -138,7 +143,7 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | CMS screens | Events (with drafts), members, applications, registrations, releases, people, dashboard. |
 | Access levels | **Built; migration 0006 must be applied** (SQL editor) before the four levels exist in the database. Until then the CMS falls back to owner/admin. |
 | Media (photos) | Bucket, rules and the upload control are built; not exercised end to end yet. |
-| VIT EventHub | Official registration stays on EventHub; we link to it per event (planned, [EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
-| Attendance for OD | Feasible, not planned yet: [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md). |
-| Event questions / FAQ | Planned: [EVENT-QA.md](EVENT-QA.md). |
+| VIT EventHub | Built (migration 0007): per-event link, poster short link + QR, click counter ([EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
+| Attendance for OD | Screens only, no backend ([ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md)). |
+| Event questions / FAQ | Built (migration 0007): [EVENT-QA.md](EVENT-QA.md). |
 | Backend overall | **Functionally complete** apart from the items under "Not done yet" in [ROADMAP.md](ROADMAP.md). |

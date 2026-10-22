@@ -1,6 +1,6 @@
 # Event attendance (for OD): is it feasible?
 
-Status: **feasibility note only, not a plan and not built.** Written 2026-10-22 for whoever picks this up. Read [ARCHITECTURE.md](ARCHITECTURE.md) first.
+Status: **feasibility note; screens exist as layout only (no backend).** CMS: `src/app/(admin)/attendance/page.tsx` (Attendance in the menu). Site: `/events/<slug>/attendance` (`src/app/(site)/events/[slug]/attendance/page.tsx`, not linked anywhere, not indexed). Every control is disabled until the backend exists. Written 2026-10-22 for whoever picks this up. Read [ARCHITECTURE.md](ARCHITECTURE.md) first.
 
 ## What the club wants
 After people register and turn up, take **several attendance marks per event** (for example: arrival, a mid-event check, leaving, end of event), so OD is given only to people who were actually there for the required parts. Today this is done by collecting registration numbers into an Excel sheet. The goal is to move it to the website **and stop proxies** (a friend marking for someone) and people claiming OD without attending.

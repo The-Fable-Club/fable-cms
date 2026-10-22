@@ -1,6 +1,6 @@
 # VIT EventHub and our registration
 
-Status: **decided and planned, not built.** Updated 2026-10-22. Background: [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).
+Status: **built 2026-10-22; needs migration 0007 applied.** Background: [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).
 
 ## Background
 VIT Chennai requires every club event to be registered on **EventHub** (eventhubcc.vit.ac.in). It needs the student's VTOP login, takes payments and handles teams. The club gets the list of registered students from EventHub **as a CSV, on event day**.
@@ -11,14 +11,14 @@ VIT Chennai requires every club event to be registered on **EventHub** (eventhub
 - **The participant hub stays public** (anyone with the event's hub link can open it), so participants can download materials without an account. Consequence: never post anything private in a hub.
 - **Our own registration form stays for now** (for on-spot sign-ups and our own counts); it may be removed later after the club's leadership decides.
 
-## Plan: the EventHub link (to build)
+## The EventHub link (built)
 1. **Database (migration 0007):** `alter table events add column eventhub_url text`, checked to be `null` or an `https://` URL on `eventhubcc.vit.ac.in` (so it can only point at the real EventHub, not a look-alike).
 2. **Contract (both repos, identical):** `eventhub: httpUrl.nullable().default(null)` on `SnapshotEvent`, host must be `eventhubcc.vit.ac.in`. The default keeps old releases readable, so no `SCHEMA_VERSION` bump.
 3. **CMS:** one optional field on the event form, "Official EventHub link", independent of the registration mode. Tests for accepted and refused URLs (look-alike hosts, `http://`, other domains).
 4. **Site:** on the event page, a prominent **Register on EventHub** button (new tab, `rel="noopener noreferrer"`, labelled as the official VIT registration) while the event is not past. Our own form, if enabled, sits below it, labelled for on-spot / club sign-ups. The carousel and the home "Registrations open" announcement count an event with an EventHub link as open for registration.
 5. **Tests:** unit tests in both repos; one live publish check that the button appears after a rebuild.
 
-## The poster flow (planned with the link)
+## The poster flow (built)
 Our site is the front door for every event; EventHub is only where the official registration happens.
 
 1. **Poster:** carries a QR code and a short link, `thefableclub.com/e/<event-slug>`, which redirects to the event page. The CMS shows the short link and a downloadable QR (PNG/SVG) on each event, ready for the poster.
@@ -28,7 +28,7 @@ Our site is the front door for every event; EventHub is only where the official 
    - The redirect only ever forwards to the event's saved `eventhub_url` (which must be on `eventhubcc.vit.ac.in`), so it cannot be abused as an open redirect.
    - The CMS shows the counts on the event and on the dashboard.
 
-Build order: the link (above), then the short link and QR, then the click counter (needs a small table and one insert-only route, like registrations).
+Where it lives: CMS event form field and the "For the poster" panel on each event (QR as PNG/SVG, click counts); site `/e/<slug>` (redirect in `next.config.ts`), `/go/<slug>` (`src/app/go/[slug]/route.ts`, `src/lib/clicks.ts`); database `events.eventhub_url`, `event_clicks`, `count_eventhub_click()`.
 
 ## Can we know who registered on EventHub before event day?
 **Not reliably, without access to EventHub's own data.** Only EventHub knows who completed registration (and payment). Options, best first:
