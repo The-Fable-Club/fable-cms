@@ -6,7 +6,7 @@ Status: **built 2026-10-22; needs migration 0007 applied.** Email sending needs 
 Under each event on our site, anyone can **ask a question**. Questions arrive **only in the CMS** (never shown on the site automatically). Staff **answer in the CMS** and **choose** whether a question and its answer appear on the event page as an FAQ.
 
 ## The flow
-1. **Ask (site):** a small form on the event page: question (required, up to ~500 characters), optional name, optional email (see "Telling them the answer"). Same protections as registrations: same-origin check, size limit, honeypot, validation, and a per-device/per-email and global rate limit in the database. Insert-only with the public key; the site never reads questions back.
+1. **Ask (site):** a small form on the event page: question (required, up to ~500 characters), optional name, optional email (see "Telling them the answer"). Same protections as registrations: same-origin check, size limit, honeypot, validation, and a per-email (5 an hour) and global (300 an hour) limit in the database. Insert-only with the public key; the site never reads questions back.
 2. **Triage (CMS):** a Questions inbox per event and across events: new / answered / published / hidden. Staff write an answer, can **edit the question text before publishing** (to fix typos or strip personal details), and tick **Show on site**.
 3. **Publish (site):** answered questions marked "Show on site" go into the release with the event (a new `faq: [{ question, answer }]` list on the event, added to the data contract with a default so old releases stay valid). They appear on the event page after the next Publish, like every other change.
 
@@ -30,9 +30,8 @@ Recommendation: **A always, B as an optional tick box, C when useful.** Do not r
 
 ## Safety notes
 - Questions are untrusted text: shown in the CMS as plain text only, never as HTML.
-- The answer page (`/q/<code>`) reveals only that question, its answer and the event title; codes are long random values, not counters.
 - Spam: rate limits, honeypot, a length limit, and a "hide" action; repeated abuse from one email can be blocked.
-- Retention: delete unanswered and hidden questions some time after the event (decide how long), and emails as soon as they are no longer needed.
+- Retention: questions are kept (decided); emails are deleted as soon as the answer is sent. Admins delete questions by hand when needed.
 
 ## Decisions (2026-10-22)
 - Name: optional. Email: optional, only to send the answer; deleted once sent.
