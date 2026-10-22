@@ -138,4 +138,6 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | CMS screens | Events (with drafts), members, applications, registrations, releases, people, dashboard. |
 | Access levels | **Built; migration 0006 must be applied** (SQL editor) before the four levels exist in the database. Until then the CMS falls back to owner/admin. |
 | Media (photos) | Bucket, rules and the upload control are built; not exercised end to end yet. |
+| VIT EventHub | Official registration stays on EventHub; we link to it per event (planned, [EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
+| Attendance for OD | Feasible, not planned yet: [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md). |
 | Backend overall | **Functionally complete** apart from the items under "Not done yet" in [ROADMAP.md](ROADMAP.md). |
