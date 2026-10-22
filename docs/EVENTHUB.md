@@ -18,11 +18,23 @@ VIT Chennai requires every club event to be registered on **EventHub** (eventhub
 4. **Site:** on the event page, a prominent **Register on EventHub** button (new tab, `rel="noopener noreferrer"`, labelled as the official VIT registration) while the event is not past. Our own form, if enabled, sits below it, labelled for on-spot / club sign-ups. The carousel and the home "Registrations open" announcement count an event with an EventHub link as open for registration.
 5. **Tests:** unit tests in both repos; one live publish check that the button appears after a rebuild.
 
+## The poster flow (planned with the link)
+Our site is the front door for every event; EventHub is only where the official registration happens.
+
+1. **Poster:** carries a QR code and a short link, `thefableclub.com/e/<event-slug>`, which redirects to the event page. The CMS shows the short link and a downloadable QR (PNG/SVG) on each event, ready for the poster.
+2. **Event page:** everything a student needs (details, time, venue, what to bring), plus the participant hub with materials.
+3. **"Register on EventHub" button:** goes through a tiny redirect on our site, `/go/<event-slug>`, which adds one to a counter and forwards to that event's EventHub page.
+   - The counter stores **only numbers** (clicks per event per day): no IP address, no cookie, no reg number. It is an early signal of interest, **not** a registration count.
+   - The redirect only ever forwards to the event's saved `eventhub_url` (which must be on `eventhubcc.vit.ac.in`), so it cannot be abused as an open redirect.
+   - The CMS shows the counts on the event and on the dashboard.
+
+Build order: the link (above), then the short link and QR, then the click counter (needs a small table and one insert-only route, like registrations).
+
 ## Can we know who registered on EventHub before event day?
 **Not reliably, without access to EventHub's own data.** Only EventHub knows who completed registration (and payment). Options, best first:
 
 1. **Ask for earlier exports or organiser access.** If EventHub (or the club's faculty coordinator account) can download the registrant list before event day, import it whenever available (the import below is built to be repeated). This is the only option that is actually verified.
-2. **Self-confirmation on our site (optional).** After registering on EventHub, a student enters their registration number (and, if EventHub shows one, the confirmation or receipt number) on our event page. It is **not proof**, only a claim, but it gives an early head count and is checked against the official CSV on event day; claims with no match are flagged. It asks for nothing sensitive.
+2. **Not doing:** self-confirmation on our site (decided against, 2026-10-22; registration is only confirmed on event day from the CSV). The click counter above is the early signal instead.
 3. **Don't**: ask students to upload screenshots or receipts (personal data, storage, easy to fake) or log in to EventHub on their behalf.
 
-Recommendation: ask for option 1; add option 2 only if an early head count matters.
+VTOP/EventHub has no API for confirmations, so the official CSV on event day is the source of truth.

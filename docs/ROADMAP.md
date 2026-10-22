@@ -26,7 +26,7 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
 | Audit log | The table exists; nothing writes to it yet. Releases already record who published. |
 | Event attendance for OD | Feasible, not built. Roster = the EventHub CSV imported in the CMS + on-spot additions entered in the CMS, every change logged (who, when, source). Needs a sample EventHub CSV and the university OD format first. [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md) |
-| Official VIT EventHub registration | Decided: link to each event's official EventHub page; no VTOP credentials, payments, deeper integration or student accounts; the participant hub stays public; our own form stays for now. **Link planned, not built** (migration 0007 + one CMS field + a site button). [EVENTHUB.md](EVENTHUB.md) |
+| Official VIT EventHub registration | Decided: link to each event's official EventHub page; no VTOP credentials, payments, deeper integration or student accounts; the participant hub stays public; our own form stays for now. **Planned, not built:** EventHub link per event, poster short link + QR, and a privacy-free click counter on the register button. [EVENTHUB.md](EVENTHUB.md) |
 
 ### Done
 Data contract and date rules (mutation tested) · snapshot builder · publish, retry and rollback · drafts · four access levels (app side, database side written) · events and people screens · applications and registrations (inbox, status, notes, CSV) · People screen with safety rules · live security and publish tests · live site wired to the database.
