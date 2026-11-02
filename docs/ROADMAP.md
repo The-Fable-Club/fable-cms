@@ -6,6 +6,7 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 **Yes for everything the club needs to run: publishing, events, people, sign-ups, access control.** What remains is small and mostly optional:
 
 ### Do next (short)
+0. **Apply migration 0008** (`supabase/migrations/0008_recruitment.sql`) in the SQL editor (independent of 0007). Until it is applied the new Join form cannot save (it sends phone, team, build, task, intake). Recruitment is "opening soon" on the site, so nothing is lost meanwhile. Then `npm run test:live`.
 0. **Apply migration 0007** (`supabase/migrations/0007_eventhub_questions.sql`) in the SQL editor, then push both repos. Then `npm run test:live` (the 0007 tests run once it is applied).
 1. **Apply migration 0006** (`supabase/migrations/0006_roles.sql`) in the Supabase SQL editor. It creates the four access levels and draft events. Then push the CMS (the app already understands both the old and the new database).
 2. **Give the assistant `DATABASE_URL`** (optional): paste the direct connection string into `fable-cms/.env.local`. It lets migrations run from the terminal and enables `tests/live/roles.live.test.ts`, which proves every level against every table.
