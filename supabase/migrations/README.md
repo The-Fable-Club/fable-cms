@@ -17,3 +17,4 @@ The database will change while the club decides what each event / member / page 
 | `0005_trigger_functions_security_definer.sql` | Fix: the spam-limit triggers now run with owner rights, because the public role can no longer read the tables they count (every sign-up was refused until this) | applied 2026-10-17 |
 | `0006_roles.sql` | Four access levels (member < creator < admin < owner) enforced by row level security, `role_rank()`, draft events, photo upload rights | applied 2026-10-18 |
 | `0007_eventhub_questions.sql` | The official EventHub link on events (host-locked) and event questions (public insert, spam limits, creators draft answers, admins publish/hide/email) | **not yet** |
+| `0008_recruitment.sql` | Recruitment: phone, preferred team, what they want to build, the short task answer; intakes with one application per registration number; old trial rows set apart as `pre-launch` | **not yet** |
