@@ -4,7 +4,7 @@ export const INBOXES = {
     title: "Applications",
     intro: "People who applied to join the club from the Join page.",
     statuses: ["new", "reviewed", "accepted", "rejected"],
-    columns: ["created_at", "name", "reg_no", "email", "department", "year", "level", "tracks", "why", "status", "notes"],
+    columns: ["created_at", "intake", "name", "reg_no", "email", "phone", "department", "year", "team", "build", "why", "task", "status", "notes"],
   },
   registrations: {
     title: "Registrations",

@@ -39,15 +39,31 @@ export function Inbox({ table, rows, filter, canTriage }: { table: InboxTable; r
             <p className="mt-1 text-sm text-ink/70">
               {String(r.reg_no)} · <a className="underline underline-offset-2" href={`mailto:${String(r.email)}`}>{String(r.email)}</a> · {String(r.department)} · {String(r.year)}
               {table === "registrations" && <> · event <strong>{String(r.event_slug)}</strong></>}
-              {table === "registrations" && r.phone ? <> · {String(r.phone)}</> : null}
+              {r.phone ? <> · {String(r.phone)}</> : null}
             </p>
             {table === "applications" && (
-              <div className="mt-3 text-sm">
+              <div className="mt-3 space-y-3 text-sm">
                 <p>
-                  <span className="font-mono text-xs uppercase tracking-wider text-ink/60">Level</span> {String(r.level)}
+                  <span className="font-mono text-xs uppercase tracking-wider text-ink/60">Team</span> {r.team ? String(r.team) : "—"}
+                  <span className="ml-3 font-mono text-xs uppercase tracking-wider text-ink/60">Intake</span> {String(r.intake ?? "")}
+                  {/* older applications asked for a level and tracks instead */}
+                  {r.level ? <> · level {String(r.level)}</> : null}
                   {Array.isArray(r.tracks) && r.tracks.length > 0 && <> · {(r.tracks as string[]).join(", ")}</>}
                 </p>
-                <p className="mt-2 whitespace-pre-wrap">{String(r.why)}</p>
+                {(
+                  [
+                    ["Wants to build or learn", r.build],
+                    ["Why they want to join", r.why],
+                    ["Short task", r.task],
+                  ] as const
+                ).map(([label, v]) =>
+                  v ? (
+                    <div key={label}>
+                      <p className="font-mono text-xs uppercase tracking-wider text-ink/60">{label}</p>
+                      <p className="mt-1 whitespace-pre-wrap">{String(v)}</p>
+                    </div>
+                  ) : null,
+                )}
               </div>
             )}
             {!canTriage ? (
