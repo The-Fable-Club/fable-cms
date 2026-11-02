@@ -2,7 +2,7 @@
 // let Vercel really rebuild the public site, and read the live pages.
 // Uses the service key in place of a signed-in admin (the CMS screens call the same publish()).
 // Adds one temporary event (slug zz-live-test) and removes it again, publishing both times.
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { publish, type PublishDeps } from "@/lib/publish";
 import type { EventRow, MemberRow, QuestionRow } from "@/lib/snapshot";
 
@@ -25,9 +25,18 @@ const json = async <T,>(r: Response) => {
   return (text ? JSON.parse(text) : null) as T; // inserts with return=minimal have an empty body
 };
 
+// Go by the database server's clock, not this machine's: a wrong local clock would otherwise
+// turn the one-minute wait between publishes into hours (or skip it and hit the rate limit).
+let skew = 0;
+const now = () => new Date(Date.now() + skew);
+beforeAll(async () => {
+  const date = (await fetch(`${URL_}/rest/v1/`, { method: "HEAD", headers: { apikey: SERVICE, "User-Agent": "node" } })).headers.get("date");
+  if (date) skew = new Date(date).getTime() - Date.now();
+});
+
 const deps = (hookUrl: string | null): PublishDeps => ({
   supabaseUrl: URL_,
-  now: () => new Date(),
+  now,
   loadRows: async () => ({
     events: await json<EventRow[]>(await rest("events?select=*")),
     members: await json<MemberRow[]>(await rest("members?select=*")),
@@ -66,11 +75,11 @@ async function waitFor(check: () => Promise<boolean>, what: string, timeoutMs = 
 const page = async (path: string) => (await fetch(`${SITE}${path}?t=${Date.now()}`, { cache: "no-store" })).text();
 async function waitForRateLimit() {
   const rows = await json<{ published_at: string }[]>(await rest("releases?select=published_at&order=id.desc&limit=1"));
-  if (rows[0]) await sleep(Math.max(0, 61_000 - (Date.now() - new Date(rows[0].published_at).getTime())));
+  if (rows[0]) await sleep(Math.max(0, 61_000 - (now().getTime() - new Date(rows[0].published_at).getTime())));
 }
 
 const testEvent = {
-  slug: SLUG, title: TITLE, kind: "Workshop", phase: 1, date_mode: "exact", start_date: "2026-10-19", end_date: null,
+  slug: SLUG, title: TITLE, kind: "Workshop", phase: 1, date_mode: "exact", start_date: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10), // always upcoming end_date: null,
   time_mode: "text", time_text: "6 pm", venue_mode: "tba", venue: "", seats_mode: "open", apply_mode: "form",
   summary: "Temporary event created by the live publishing test.", description: "Temporary.", highlights: ["Temporary"], art: "search",
 };
