@@ -72,7 +72,7 @@ beforeAll(async () => {
   draftEventId = (await client.query(newEvent("zz-role-draft", true).sql, newEvent("zz-role-draft", true).params)).rows[0].id;
   appId = (
     await client.query(
-      `insert into applications (name, reg_no, email, department, year, level, why) values ('Zz Role','25ZZZ0001','zz-role@example.com','T','2nd','builder','Testing the role policies thoroughly.') returning id`,
+      `insert into applications (name, reg_no, email, department, year, phone, team, build, why, task, intake) values ('Zz Role','25ZZZ0001','zz-role@example.com','T','2nd','9000000000','Technical','Something to build','Testing the role policies thoroughly.','A test answer to the short task, long enough.','zz-test') returning id`,
     )
   ).rows[0].id;
 });

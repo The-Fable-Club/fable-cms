@@ -122,7 +122,16 @@ describe("applications (live writes by visitors)", () => {
     anon("applications", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ ...person(n), level: "builder", tracks: ["Claude Code"], why: "Testing the live application path end to end.", ...over }),
+      body: JSON.stringify({
+        ...person(n),
+        phone: "+91 90000 00000",
+        team: "Agentic AI",
+        build: "An agent that plans my week.",
+        why: "Testing the live application path end to end.",
+        task: "A test answer to the short task, long enough to count.",
+        intake: "zz-test",
+        ...over,
+      }),
     });
   it("saves a valid application and hides it from the public", async () => {
     expect(await code(await app("app1"))).toBe("ok");
@@ -134,9 +143,23 @@ describe("applications (live writes by visitors)", () => {
     expect(await code(await app("app2", { why: "short" }))).toBe("23514");
     expect(await code(await app("app2", { status: "accepted" }))).toBe("42501");
   });
+  // 0008: recruitment rules
+  it("needs every answer, and a real phone number", async () => {
+    expect(await code(await app("app4", { reg_no: "25ZZZ0004", task: null }))).toBe("23514");
+    expect(await code(await app("app4", { reg_no: "25ZZZ0004", team: null }))).toBe("23514");
+    expect(await code(await app("app4", { reg_no: "25ZZZ0004", phone: "call me" }))).toBe("23514");
+  });
+  it("allows one application per registration number per intake", async () => {
+    expect(await code(await app("app5", { reg_no: "25ZZZ0005" }))).toBe("ok");
+    expect(await code(await app("app5b", { reg_no: "25zzz0005" }))).toBe("23505");
+  });
+  it("visitors cannot write notes or file into the old pre-launch rows", async () => {
+    expect(await code(await app("app6", { reg_no: "25ZZZ0006", notes: "let me in" }))).toBe("42501");
+    expect(await code(await app("app6", { reg_no: "25ZZZ0006", intake: "pre-launch" }))).toBe("42501");
+  });
   it("limits one email to 3 applications an hour", async () => {
     const outcomes: string[] = [];
-    for (let i = 0; i < 4; i++) outcomes.push(await code(await app("app3")));
+    for (let i = 0; i < 4; i++) outcomes.push(await code(await app("app3", { reg_no: `25ZZZ01${i}0` })));
     expect(outcomes.slice(0, 3)).toEqual(["ok", "ok", "ok"]);
     expect(outcomes[3]).toBe("P0001");
   });
