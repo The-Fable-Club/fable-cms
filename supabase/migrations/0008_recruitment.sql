@@ -6,6 +6,7 @@
 --     what they want to build or learn, and the answer to the short task
 --   * applications belong to an intake (e.g. '2026-27'); one per registration number per intake
 --   * the old "experience level" and "tracks" questions are no longer asked (columns kept for old rows)
+--   * a review step between "reviewed" and a decision: "shortlisted" (invited to the short chat)
 --   * rows that existed before this file (trials and tests) move to the 'pre-launch' intake,
 --     which visitors cannot write to
 
@@ -34,6 +35,10 @@ alter table applications add constraint applications_intake_check check (intake 
 alter table applications drop constraint if exists applications_complete_check;
 alter table applications add constraint applications_complete_check
   check (intake = 'pre-launch' or (phone is not null and team is not null and build is not null and task is not null));
+
+-- The review steps (src/lib/applications.ts): "shortlisted" = invited to the short chat.
+alter table applications drop constraint if exists applications_status_check;
+alter table applications add constraint applications_status_check check (status in ('new','reviewed','shortlisted','accepted','rejected'));
 
 -- One application per person per intake (the site turns the clash into "you have already applied").
 -- (old trial rows may repeat a number, so they are left out of the rule)
