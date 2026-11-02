@@ -1,5 +1,5 @@
 -- 0008: recruitment applications, as the club decided (2026-11).
--- NOT YET APPLIED. Run after 0001-0006 (it does not need 0007). Safe to run more than once.
+-- APPLIED 2026-11-02. Run after 0001-0006 (it does not need 0007). Safe to run more than once.
 --
 -- What changes:
 --   * new answers, required for every new application: phone/WhatsApp, preferred team,

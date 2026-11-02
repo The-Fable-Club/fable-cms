@@ -6,8 +6,7 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 **Yes for everything the club needs to run: publishing, events, people, sign-ups, access control.** What remains is small and mostly optional:
 
 ### Do next (short)
-0. **Apply migration 0008** (`supabase/migrations/0008_recruitment.sql`) in the SQL editor (independent of 0007). Until it is applied the new Join form cannot save (it sends phone, team, build, task, intake). Recruitment is "opening soon" on the site, so nothing is lost meanwhile. Then `npm run test:live`.
-0. **Apply migration 0007** (`supabase/migrations/0007_eventhub_questions.sql`) in the SQL editor, then push both repos. Then `npm run test:live` (the 0007 tests run once it is applied).
+0. Migrations 0001-0008 are applied (0007 and 0008 on 2026-11-02). New migrations: the assistant applies them with `node scripts/db.mjs --file ...` (needs `DATABASE_URL` in `.env.local`).
 1. **Apply migration 0006** (`supabase/migrations/0006_roles.sql`) in the Supabase SQL editor. It creates the four access levels and draft events. Then push the CMS (the app already understands both the old and the new database).
 2. **Give the assistant `DATABASE_URL`** (optional): paste the direct connection string into `fable-cms/.env.local`. It lets migrations run from the terminal and enables `tests/live/roles.live.test.ts`, which proves every level against every table.
 3. First real content: replace the placeholder events and people in the CMS, then delete the `placeholder-*` rows (`npx tsx scripts/seed-placeholders.mts --remove`) and press Publish.
@@ -28,8 +27,8 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
 | Audit log | The table exists; nothing writes to it yet. Releases already record who published. |
 | Event attendance for OD | **Screens only (no backend)** in the CMS and on the site, for the club member building it. Roster = EventHub CSV + logged on-spot additions. Needs a sample EventHub CSV and the OD format. [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md) |
-| Event questions / FAQ | **Built (needs migration 0007):** ask under each event -> CMS Questions -> answer -> optional email -> optional public FAQ after Publish; delete in the CMS. Email sending needs `RESEND_API_KEY` + `MAIL_FROM`. [EVENT-QA.md](EVENT-QA.md) |
-| Official VIT EventHub registration | **Built (needs migration 0007):** EventHub link per event, poster short link + QR. No VTOP credentials, payments, deeper integration or student accounts; hub stays public; our own form stays for now. [EVENTHUB.md](EVENTHUB.md) |
+| Event questions / FAQ | **Built:** ask under each event -> CMS Questions -> answer -> optional email -> optional public FAQ after Publish; delete in the CMS. Email sending needs `RESEND_API_KEY` + `MAIL_FROM`. [EVENT-QA.md](EVENT-QA.md) |
+| Official VIT EventHub registration | **Built:** EventHub link per event, poster short link + QR. No VTOP credentials, payments, deeper integration or student accounts; hub stays public; our own form stays for now. [EVENTHUB.md](EVENTHUB.md) |
 
 ### Done
 Data contract and date rules (mutation tested) · snapshot builder · publish, retry and rollback · drafts · four access levels (app side, database side written) · events and people screens · applications and registrations (inbox, status, notes, CSV) · People screen with safety rules · live security and publish tests · live site wired to the database.

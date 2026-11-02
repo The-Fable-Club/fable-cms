@@ -1,5 +1,5 @@
 -- 0007: the official EventHub link and event questions (FAQ).
--- NOT YET APPLIED. Run after 0001-0006. Safe to run more than once.
+-- APPLIED 2026-11-02. Run after 0001-0006. Safe to run more than once.
 -- Plans: docs/EVENTHUB.md, docs/EVENT-QA.md.
 
 -- ============================================================ EventHub link
