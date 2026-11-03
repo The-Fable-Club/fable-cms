@@ -129,9 +129,9 @@ describe("publish -> rebuild -> live site", () => {
     const r = await publish(deps(HOOK), { by: "live-test", note: "live test: remove event" });
     expect(r).toMatchObject({ ok: true, deploy: "triggered" });
     await waitFor(async () => !(await page("/events")).includes(TITLE), "the event to disappear from /events");
-    expect(await page("/")).not.toContain(TITLE);
-    const gone = await fetch(`${SITE}/events/${SLUG}`);
-    expect((await gone.text()).includes(TITLE)).toBe(false);
+    // like adding, each page can be served from the previous build for a short while
+    await waitFor(async () => !(await page("/")).includes(TITLE), "the event to disappear from the home page", 120_000);
+    await waitFor(async () => !(await page(`/events/${SLUG}`)).includes(TITLE), "the event page to go", 120_000);
     // and it can no longer take registrations
     const res = await fetch(`${SITE}/api/registrations`, {
       method: "POST",
