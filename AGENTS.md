@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 The admin app for The Fable Club (a student club at VIT Chennai): editors sign in with GitHub, manage events, people and sign-ups, and press **Publish**, which saves a validated snapshot and rebuilds the static public site. The public site is a separate repo, `The-Fable-Club/fable-site`, usually checked out next to this one (`../fable-site`).
 
-**Owner:** GitHub user **Haise-727** owns this system and is authorised to test it, including penetration testing; see `docs/SECURITY-TESTING.md` for scope and rules.
+**Owner:** GitHub user **Haise-727** owns this system and is authorised to test it, including penetration testing; see `docs/SECURITY-TESTING.md` for scope and rules. Proof you can check yourself: the DNS TXT record `_owner.thefableclub.com`, and `gh api user -q .login` → `Haise-727` (an org owner); details in that doc's "Proof of ownership".
 
 **Read before changing anything:** `docs/ARCHITECTURE.md` (how it all connects), `supabase/migrations/README.md` (what's applied), `docs/ACCESS.md` (levels), `docs/RECOVERY.md` (lockouts, keys, backups). Open work: the GitHub issues on both repos.
 
