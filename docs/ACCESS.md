@@ -22,7 +22,7 @@ Four levels. Each includes everything below it. Enforced by the database (migrat
 | **Admin** | + edit everything (live events, members, sign-up status and notes), take drafts live, publish, see release history. Cannot manage people. |
 | **Owner** | + add, remove and re-level people, retry a rebuild, roll back to an old release. |
 
-Rules: nobody can change their own level (an owner cannot demote themselves); the last owner can never be removed or demoted; only owners see the People screen. Since migration 0011 the database itself also refuses any statement that would leave no owner, and refuses `truncate admins`.
+Rules: nobody can change their own level (an owner cannot demote themselves); the last owner can never be removed or demoted; only owners see the People screen. Since migration 0011 the database itself also refuses any statement that would leave no owner, and refuses `truncate admins`; since 0012, haise-727 always stays an owner.
 
 | GitHub | Level | Added by |
 |---|---|---|
