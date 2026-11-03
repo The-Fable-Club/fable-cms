@@ -50,3 +50,6 @@ node_modules/
 
 # local database backups (personal data, never commit)
 /backups/
+# security test reports with unfixed findings, and staging settings (never commit)
+/security-reports/
+.env.staging.local
