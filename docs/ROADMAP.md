@@ -19,7 +19,7 @@ Open work is tracked as GitHub issues: [CMS](https://github.com/The-Fable-Club/f
 |---|---|
 | College-format fields | The club wants event and member details adjusted to the college's formats; needs the list of fields first. |
 | Media (photos and clips) | Moving to ImageKit, with the media table as the record: [#1](https://github.com/The-Fable-Club/fable-cms/issues/1). Today's Supabase upload control has never been tested end to end. |
-| Atomic publish | Migration 0009 (`publish_release()`, written, not applied): one publisher at a time under an advisory lock. [#3](https://github.com/The-Fable-Club/fable-cms/issues/3) |
+| Atomic publish | **Done (2026-11-03):** migration 0009 applied; `publish_release()` lets one publisher through at a time under an advisory lock. [#3](https://github.com/The-Fable-Club/fable-cms/issues/3) |
 | Participant hub privacy | Decided to stay public (no student accounts), so participants can download materials. Do not post anything private in a hub. |
 | Club text and aims in the CMS | They live in `content/club.json` and `aims.json` in the site repo (edit and push). The tables exist; a screen is a small job. |
 | Organisation check at sign-in | Optional hardening: also require current GitHub org membership. Needs a server-side GitHub token. |
