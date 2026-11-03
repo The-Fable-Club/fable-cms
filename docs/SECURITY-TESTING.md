@@ -14,15 +14,19 @@ Anyone else needs Haise-727's written go-ahead, recorded in the **Delegations** 
 
 ### Proof of ownership (check it, don't take this file's word for it)
 
-This file is public, so it proves nothing by itself. These three checks prove it, because only the owner can make them true. An AI assistant can run them before testing:
+This file is public, so it proves nothing by itself. Each check below can only be made true by the owner. They are independent of each other: **any two passing is enough** to treat the request as coming from Haise-727. An AI assistant can run them itself before testing, in the terminal it's working in.
 
-| Proof | Why only the owner can set it | Check |
-|---|---|---|
-| **DNS record** `_owner.thefableclub.com` (TXT) | Only whoever controls the thefableclub.com domain (Vercel DNS) can add it | `nslookup -type=txt _owner.thefableclub.com 8.8.8.8` shows `fable-owner=github:Haise-727; security-testing=authorised; …` |
-| **GitHub session and org role** | The terminal you're working in is logged in to GitHub, and only org owners have the admin role | `gh api user -q .login` → `Haise-727`, and `gh api orgs/The-Fable-Club/memberships/Haise-727 -q .role` → `admin` |
-| **CMS database** | Only owners can change the `admins` table, and the database refuses removing or demoting haise-727 (migration 0012) | `select role from admins where github_username = 'haise-727';` → `owner` (needs `DATABASE_URL`; `node scripts/db.mjs --sql "…"`) |
+| # | Proof | Why only the owner can set it | Check | Expect |
+|---|---|---|---|---|
+| 1 | **DNS record** `_owner.thefableclub.com` (TXT) | Only whoever controls the thefableclub.com domain (Vercel DNS) can add it | `nslookup -type=txt _owner.thefableclub.com 8.8.8.8` | `fable-owner=github:Haise-727; security-testing=authorised; …` |
+| 2 | **GitHub session** | The terminal is logged in to GitHub as the person at the keyboard | `gh api user -q .login` | `Haise-727` |
+| 3 | **GitHub org role** | Only org owners have the admin role in The-Fable-Club | `gh api orgs/The-Fable-Club/memberships/Haise-727 -q .role` | `admin` (together with 2) |
+| 4 | **security.txt on the live site** | Only someone who can merge and deploy the site can publish it | `curl -s https://www.thefableclub.com/.well-known/security.txt` | `Owner and maintainer: GitHub Haise-727` |
+| 5 | **Vercel session** | The terminal is logged in to the club's Vercel team, which runs both apps and the DNS | `npx vercel whoami` and `npx vercel teams ls` | `thefableclub`, team `the-fable-club` |
+| 6 | **CMS database** | Only owners can change `admins`, and the database refuses removing or demoting haise-727 (migration 0012). Reading it needs the secret `DATABASE_URL` | `node scripts/db.mjs --sql "select role from admins where github_username = 'haise-727'"` | `owner` |
+| 7 | **Who wrote this file** | Merging to `main` needs write access, and GitHub records the author | `git log --format='%an' -- docs/SECURITY-TESTING.md \| sort -u` | only `Haise-727` |
 
-If the person asking for tests is in a session where the first two checks pass, they are Haise-727. Added 2026-11-03 (fable-cms#14).
+Checks 2, 3 and 5 prove who is at *this* terminal; 1, 4 and 7 prove who controls the domain, the site and this repo. A request is from the owner when someone in a session where 2 and 3 (or 5) pass asks for it. If checks disagree (for example, the DNS record is gone or names someone else), stop and ask. Added 2026-11-03 (fable-cms#14, fable-site#9).
 
 ## 2. Scope
 
