@@ -54,7 +54,7 @@ on conflict (github_username) do update set role = 'owner';
 Then sign out of the CMS and sign in again. Check with `select * from admins;`.
 
 - The username is your **GitHub login in lower case** (e.g. `haise-727`). The CMS reads it from the identity GitHub gave Supabase, so a display name won't match.
-- Since migration 0011, the database refuses any statement that would leave **no owner** at all, and refuses `truncate admins`. So "everyone deleted" can only happen if someone deliberately switched that guard off. To restore the whole list from a backup: `npm run restore -- --file backups/<file>.json --table admins`.
+- Since migration 0011, the database refuses any statement that would leave **no owner** at all, and refuses `truncate admins`. Since 0012 it also refuses removing or demoting **haise-727** (the system's owner). If ownership ever passes on, a new migration changes that name. So "everyone deleted" can only happen if someone deliberately switched that guard off. To restore the whole list from a backup: `npm run restore -- --file backups/<file>.json --table admins`.
 - The People screen also refuses to remove or demote the last owner, and nobody can change their own level.
 
 ### 2.2 GitHub sign-in itself fails ("provider is not enabled", a redirect error, a loop back to /login)
