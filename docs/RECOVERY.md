@@ -18,12 +18,12 @@ Fill in the "login" column once, and keep it up to date when people change. The 
 | Service | What it runs | Login (whose account) | Keep at least 2 people in it |
 |---|---|---|---|
 | **GitHub** org `The-Fable-Club` | Both repos, the OAuth app for CMS sign-in | Org owners (see [ACCESS.md](ACCESS.md)) | Org owners |
-| **Vercel** team "The Fable Club" (Hobby) | `fable-site` (www.thefableclub.com), `fable-cms` (cms.thefableclub.com), the DNS for thefableclub.com | _fill in_ | Team members |
-| **Supabase** org "The Fable Club", project `cvfwkrhldhtkydisduey` | Database, GitHub sign-in, storage | _fill in_ | Org members (Organization → Team) |
-| **Domain registrar** for thefableclub.com | Renewal of the domain (nameservers point at Vercel) | _fill in_ | n/a, but note the renewal date: _fill in_ |
-| **Zoho Mail** | contact@thefableclub.com inbox (MX records) | _fill in_ | Zoho admins |
-| **Resend** | Sending the automatic emails (domain verified on 2026-11-03) | _fill in_ | Team members |
-| **ImageKit** (`ik.imagekit.io/thefableclub`) | Photos and clips (being built, fable-cms#1) | _fill in_ | Team members |
+| **Vercel** team "The Fable Club" (Hobby) | `fable-site` (www.thefableclub.com), `fable-cms` (cms.thefableclub.com), the DNS for thefableclub.com |me and sharann | Team members |
+| **Supabase** org "The Fable Club", project `cvfwkrhldhtkydisduey` | Database, GitHub sign-in, storage | me and sharann | Org members (Organization → Team) |
+| **Domain registrar** for thefableclub.com | Renewal of the domain (nameservers point at Vercel) | sharann | n/a, but note the renewal date: no idea|
+| **Zoho Mail** | contact@thefableclub.com inbox (MX records) | sharann and me | Zoho admins |
+| **Resend** | Sending the automatic emails (domain verified on 2026-11-03) | me | Team members |
+| **ImageKit** (`ik.imagekit.io/thefableclub`) | Photos and clips (being built, fable-cms#1) |me| Team members |
 
 | Secret | Lives in | Used for | If lost or leaked |
 |---|---|---|---|
@@ -151,7 +151,7 @@ It only **adds back rows that are missing** (matched on the primary key), never 
 | Publish worked, but the site didn't change | Vercel → fable-site → Deployments: the build failed. A bad release fails the build on purpose and the old site keeps serving. The log names the event and field; fix it in the CMS and publish again. If the hook failed, an owner presses **Retry rebuild** on Releases. |
 | Forms on the site fail, CMS shows errors, builds fail fetching the release | The free Supabase project **pauses after about a week without activity**. Supabase dashboard → the project → **Restore/Resume**. |
 | No email for new applications | `select status_code, content, error_msg from net._http_response order by created desc limit 5;` `401` = secret mismatch (3.7); `502` = Resend refused (check the key and domain, 3.6); nothing at all = the vault secret is missing or the trigger is off (`select tgname from pg_trigger where tgname = 't_notify_new_application';`). |
-| "Wait a minute before publishing again" | At most one publish per minute (wait 60 s). With migration 0009 applied, the lock also stops two people publishing at once. |
+| "Wait a minute before publishing again" | At most one publish per minute (wait 60 s). A database lock (migration 0009) also stops two people publishing at once. |
 | A migration went wrong | Take a backup first, always (4.1). Migrations are additive where possible; a fix is a **new** numbered migration, never an edit to an applied one. |
 | Someone leaves the club | Remove them in the CMS People screen, the GitHub org, Vercel and Supabase. Replace any secret they had in a `.env.local` (section 3). |
 

@@ -51,7 +51,7 @@ Both repos are public (Vercel Hobby cannot deploy a private organisation repo). 
 ### A. Publishing (editor -> live site)
 1. An editor with level **admin** or **owner** presses **Publish** on the CMS dashboard.
 2. The CMS reads all events and people **as that person** (row level security applies), builds one JSON **snapshot** and checks it against the **data contract** (`src/lib/contract.ts`). If anything is invalid, nothing is saved and the screen lists each problem by name and field.
-3. The snapshot is saved as a new row in `releases` (history is never rewritten). At most one publish per minute. With migration 0009 applied, the save goes through `publish_release()`, which takes a lock and re-checks the limit inside one transaction, so two people pressing Publish at the same moment can't both go through. Until 0009 is applied, the CMS falls back to the old check-then-insert.
+3. The snapshot is saved as a new row in `releases` (history is never rewritten). At most one publish per minute. The save goes through `publish_release()` (migration 0009, applied 2026-11-03), which takes a lock and re-checks the limit inside one transaction, so two people pressing Publish at the same moment can't both go through. It runs as the signed-in person, so row level security still decides who may publish. (If the function were ever missing, the CMS falls back to the old check-then-insert.)
 4. The CMS then calls the Vercel **Deploy Hook**. If that fails, the release is still saved and an owner can press *Retry rebuild* on the Releases screen.
 5. Vercel builds `main` of `fable-site`. Its `prebuild` step (`scripts/pull-snapshot.mjs`) reads the newest release **once** through the read-only `public_release` view with the public key, and checks it against the same contract. **On Vercel a failed or invalid fetch fails the build**, so a bad release can never replace a working site (the old site keeps serving).
 6. Pages are generated as static files and served from Vercel's CDN. The new content is live in about a minute.
@@ -151,7 +151,7 @@ Where each one comes from and how to replace it: [RECOVERY.md](RECOVERY.md) sect
 | Area | State |
 |---|---|
 | Public site | Live. Static, validated releases, recruitment states, Endfield-style home (loading screen, events media stage, point-cloud aims, people stage), link previews, security headers. |
-| Publishing | Proven end to end (live drill 4/4 on 2026-11-03). Atomic publish written (0009, not applied yet; safe fallback in place). |
+| Publishing | Proven end to end (live drill 4/4 on 2026-11-03). Atomic publish live (0009, applied 2026-11-03). |
 | Sign-ups | Applications (recruitment form, one per reg. no. per intake), registrations, questions: live and rate limited. |
 | Application alerts | Live (0010): each application emails contact@ through Resend. Tested end to end from the site form. |
 | Access | Four levels (0006); lock-out guard (0011); recovery runbook. |

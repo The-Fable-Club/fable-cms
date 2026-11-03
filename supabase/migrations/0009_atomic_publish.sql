@@ -1,5 +1,5 @@
 -- 0009: publishing is one atomic step in the database.
--- WRITTEN, NOT APPLIED. Run after 0001-0006. Safe to run more than once.
+-- Applied to production 2026-11-03. Run after 0001-0006. Safe to run more than once.
 --
 -- Before: publish() read the newest release (for the one-minute limit), built the
 -- snapshot, then inserted it. Two people pressing Publish at the same moment could
