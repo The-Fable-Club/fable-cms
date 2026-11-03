@@ -24,8 +24,9 @@ cp .env.example .env.local     # fill in; secrets never go in chat or git
 npm run dev -- -p 3001
 npm test                       # unit tests
 npm run test:live              # tests against the real project (see ARCHITECTURE section 8)
+npm run test:live:staging      # the same against the staging project (no publish drill)
 ```
-Localhost uses the **same database** as the live CMS: what you save or add there is real and appears on cms.thefableclub.com too. Publishing from either rebuilds the live site.
+Localhost uses the **same database** as the live CMS: what you save or add there is real and appears on cms.thefableclub.com too. Publishing from either rebuilds the live site. For experiments, attack tests and new migrations use the **staging** project instead (`.env.staging.local`, `npm run dev:staging`, `npm run db:staging`): see [docs/SECURITY-TESTING.md](docs/SECURITY-TESTING.md) section 5.
 
 ## Useful scripts
 `npm run seed` (placeholder content) · `npx tsx scripts/import-board.mts` (one-off board import) · `npx tsx scripts/publish-now.mts "note"` (publish from the terminal) · `node scripts/db.mjs --file x.sql` (run SQL; needs `DATABASE_URL`) · `npm run backup` / `npm run restore` (see [docs/RECOVERY.md](docs/RECOVERY.md)).

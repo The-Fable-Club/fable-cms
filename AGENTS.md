@@ -38,6 +38,10 @@ npx tsc --noEmit && npx eslint
 npm run test:live          # live checks; the publish drill really rebuilds the live site twice
 npm run backup             # before any migration
 node scripts/db.mjs --file supabase/migrations/00NN_x.sql
+# staging project (.env.staging.local): try migrations and attack tests here first
+npm run db:staging -- --file supabase/migrations/00NN_x.sql
+npm run test:live:staging
+npm run dev:staging        # CMS on :3201 against staging
 ```
 
 ## Hard rules
@@ -45,7 +49,7 @@ node scripts/db.mjs --file supabase/migrations/00NN_x.sql
 2. **`contract.ts` and `event-logic.ts` must stay identical** to fable-site's copies. Change both repos in the same piece of work (CMS first), and bump `SCHEMA_VERSION` when the site must know.
 3. **Authorisation lives in the database** (row level security + `role_rank()`). The app mirrors it in `roles.ts` for display only, so never rely on the app alone. Every table has RLS. The public (publishable) key may only read the newest release and insert into `applications`, `registrations` and `event_questions`.
 4. **Migrations:** a new numbered file for every change, never edit an applied one, take a backup first, and record the result in `supabase/migrations/README.md`. Functions use `security definer` only when needed, always with `set search_path = ''`, and revoke execute from `public, anon, authenticated` unless callers need it.
-5. **Localhost is production data.** Test rows start with `zz-` (emails `zz-test-…`, reg. numbers `25ZZZ…`) and are deleted afterwards.
+5. **Localhost is production data** (use the staging project for experiments: `docs/SECURITY-TESTING.md` section 5). Test rows start with `zz-` (emails `zz-test-…`, reg. numbers `25ZZZ…`) and are deleted afterwards.
 6. **Don't invent club content.** Anything not supplied by the club is a labelled placeholder.
 7. **Commits:** small, one logical change each, clear message. No AI co-author or "generated with" trailers.
 8. **This is Next.js 16** (see the block at the top): read `node_modules/next/dist/docs/` before using an API you remember from older versions.
