@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// This module also runs in the browser (the photo field), where the Content-Security-Policy forbids eval:
+// keep zod from probing for it.
+z.config({ jitless: true });
+
 // NEXT_PUBLIC_* values must be referenced literally so Next can inline them.
 const publicSchema = z.object({
   url: z.string().url(),
