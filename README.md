@@ -7,7 +7,9 @@ Separate from the public site on purpose: [The-Fable-Club/fable-site](https://gi
 ## Read first
 | | |
 |---|---|
+| [AGENTS.md](AGENTS.md) | Map of the code, rules and recipes: start here (also what AI assistants read) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How everything connects, the data flows, security, tests, status report |
+| [docs/RECOVERY.md](docs/RECOVERY.md) | **Locked out, lost a key, deleted data**: accounts, where every secret lives, backups and restore |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What is done, what is left, suggestions |
 | [docs/ACCESS.md](docs/ACCESS.md) | The four access levels (member, creator, admin, owner), who has them, GitHub teams |
 | [docs/INTEGRATION-PLAN.md](docs/INTEGRATION-PLAN.md) | Design decisions and the running progress log |
@@ -25,4 +27,4 @@ npm run test:live              # tests against the real project (see ARCHITECTUR
 Localhost uses the **same database** as the live CMS: what you save or add there is real and appears on cms.thefableclub.com too. Publishing from either rebuilds the live site.
 
 ## Useful scripts
-`npm run seed` (placeholder content) · `npx tsx scripts/import-board.mts` (one-off board import) · `npx tsx scripts/publish-now.mts "note"` (publish from the terminal) · `node scripts/db.mjs --file x.sql` (run SQL; needs `DATABASE_URL`).
+`npm run seed` (placeholder content) · `npx tsx scripts/import-board.mts` (one-off board import) · `npx tsx scripts/publish-now.mts "note"` (publish from the terminal) · `node scripts/db.mjs --file x.sql` (run SQL; needs `DATABASE_URL`) · `npm run backup` / `npm run restore` (see [docs/RECOVERY.md](docs/RECOVERY.md)).

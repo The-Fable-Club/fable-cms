@@ -24,10 +24,10 @@ Open work is tracked as GitHub issues: [CMS](https://github.com/The-Fable-Club/f
 | Club text and aims in the CMS | They live in `content/club.json` and `aims.json` in the site repo (edit and push). The tables exist; a screen is a small job. |
 | Organisation check at sign-in | Optional hardening: also require current GitHub org membership. Needs a server-side GitHub token. |
 | Capacity and waitlists | "Seats" is text only. Registrations are not capped. |
-| Notifications | Email to the club for each new application: [#2](https://github.com/The-Fable-Club/fable-cms/issues/2) (needs Resend). No email to people who register. |
+| Notifications | **Built (2026-11-03):** each new application emails contact@thefableclub.com (migration 0010, Resend). No email to people who register. |
 | Dashboard accuracy | "Unpublished changes" ignores deleted rows. |
 | Soft 404 | `/events/<unknown>` answers HTTP 200 with a not-found page (a Next.js streaming detail). |
-| Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
+| Backups | **Built:** `npm run backup` saves every table to `backups/` (git-ignored), `npm run restore` puts rows back; lock-out guard (0011); runbook in [RECOVERY.md](RECOVERY.md). Still manual: run it weekly and before migrations. A scheduled backup is a possible next step. |
 | Audit log | The table exists; nothing writes to it yet. Releases already record who published. |
 | Event attendance for OD | **Screens only (no backend)** in the CMS and on the site, for the club member building it. Roster = EventHub CSV + logged on-spot additions. Needs a sample EventHub CSV and the OD format. [ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md) |
 | Event questions / FAQ | **Built:** ask under each event -> CMS Questions -> answer -> optional email -> optional public FAQ after Publish; delete in the CMS. Email sending needs `RESEND_API_KEY` + `MAIL_FROM`. [EVENT-QA.md](EVENT-QA.md) |

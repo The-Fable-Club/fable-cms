@@ -1,6 +1,6 @@
 # Architecture and status report
 
-Last updated 2026-10-17. This is the one document that describes how the whole Fable Club system fits together. The detailed pieces: [INTEGRATION-PLAN.md](INTEGRATION-PLAN.md) (design decisions and progress log), [ACCESS.md](ACCESS.md) (who can do what), [DEPLOY.md](DEPLOY.md) and [SETUP.md](SETUP.md) (how it was set up), [ROADMAP.md](ROADMAP.md) (what is left).
+Last updated 2026-11-03. This is the one document that describes how the whole Fable Club system fits together. The detailed pieces: [RECOVERY.md](RECOVERY.md) (lockouts, lost keys, backups: **read it once before you need it**), [ACCESS.md](ACCESS.md) (who can do what), [INTEGRATION-PLAN.md](INTEGRATION-PLAN.md) (design decisions and progress log), [DEPLOY.md](DEPLOY.md) and [SETUP.md](SETUP.md) (how it was set up), [ROADMAP.md](ROADMAP.md) and the GitHub issues (what is left). For a code map, rules and recipes (also what AI assistants read): [../AGENTS.md](../AGENTS.md).
 
 ## 1. The big picture
 
@@ -51,7 +51,7 @@ Both repos are public (Vercel Hobby cannot deploy a private organisation repo). 
 ### A. Publishing (editor -> live site)
 1. An editor with level **admin** or **owner** presses **Publish** on the CMS dashboard.
 2. The CMS reads all events and people **as that person** (row level security applies), builds one JSON **snapshot** and checks it against the **data contract** (`src/lib/contract.ts`). If anything is invalid, nothing is saved and the screen lists each problem by name and field.
-3. The snapshot is saved as a new row in `releases` (history is never rewritten). At most one publish per minute.
+3. The snapshot is saved as a new row in `releases` (history is never rewritten). At most one publish per minute. With migration 0009 applied, the save goes through `publish_release()`, which takes a lock and re-checks the limit inside one transaction, so two people pressing Publish at the same moment can't both go through. Until 0009 is applied, the CMS falls back to the old check-then-insert.
 4. The CMS then calls the Vercel **Deploy Hook**. If that fails, the release is still saved and an owner can press *Retry rebuild* on the Releases screen.
 5. Vercel builds `main` of `fable-site`. Its `prebuild` step (`scripts/pull-snapshot.mjs`) reads the newest release **once** through the read-only `public_release` view with the public key, and checks it against the same contract. **On Vercel a failed or invalid fetch fails the build**, so a bad release can never replace a working site (the old site keeps serving).
 6. Pages are generated as static files and served from Vercel's CDN. The new content is live in about a minute.
@@ -66,6 +66,12 @@ Events change status by themselves as dates pass (the site recomputes Live / Ope
 3. It inserts one row with Supabase's **publishable** key. That key can only INSERT into those two tables (row level security + column grants). Nothing is read back.
 4. The database has the last word: `registrations` only accepts an event that currently takes registrations (`event_accepts_registrations()`), refuses duplicates (one per email per event), and a trigger limits each email to 3 per hour and everyone to 500 (applications: 300) per hour.
 5. Editors see the rows in the CMS (Applications / Registrations), can set a status and notes (admins and owners), and download a CSV.
+
+### B1. The club hears about each application (migration 0010)
+1. After a row lands in `applications` (any intake except the old `pre-launch` rows), the trigger `t_notify_new_application` queues an HTTPS POST with the row (minus notes and status) to `https://cms.thefableclub.com/api/hooks/new-application`, using `pg_net`. It is sent in the background after the insert commits, so a slow or failing CMS never blocks or loses an application.
+2. The request carries a shared secret from the Supabase vault (`application_hook_secret`). The route compares it with `APPLICATION_HOOK_SECRET` (constant-time) and refuses anything else with 401.
+3. The CMS formats the email (`newApplicationMail()` in `src/lib/applications.ts`) and sends it through Resend to contact@thefableclub.com, from `MAIL_FROM`.
+4. Results are kept in `net._http_response` for a while: that's where to look when an alert didn't arrive ([RECOVERY.md](RECOVERY.md) section 5).
 
 ### B2. Questions and the EventHub button (migration 0007)
 - **Questions:** the event page posts to `/api/questions` (same guards as the other forms) and inserts into `event_questions` (insert only; the database refuses answers, publishing or hiding from the public). Staff answer in the CMS; admins choose what is shown, and shown answers go out as the event's FAQ with the next Publish. Optional answer emails go through Resend (`RESEND_API_KEY`, `MAIL_FROM`); the address is deleted once sent.
@@ -95,14 +101,15 @@ Rules: nobody can change their own level; the last owner can never be removed or
 | Faculty, board, leads, members | Supabase `members` (group + order) | Release snapshot, at publish |
 | Club text (tagline, about, stats), aims | `content/club.json`, `content/aims.json` in the site repo | In the build (edit the file, push) |
 | Applications, registrations | Supabase tables | Never public; editors read them in the CMS |
-| Photos | Supabase Storage bucket `media` (public read) | URL inside the snapshot (upload is built, see ROADMAP) |
+| Photos | Supabase Storage bucket `media` (public read) today; moving to ImageKit (fable-cms#1) | URL inside the snapshot |
+| Recruitment state (open / soon / closed, dates, task) | `content/club.json` in the site repo | In the build; the form route re-checks on every submission |
 | Offline fallback | `content/seed/snapshot.json` in the site repo | Used by local builds with no network, and before the very first publish |
 
 Uncertain details have placeholder modes so nothing is ever blocked on missing facts: date (exact / your own text / to be announced, with an optional hidden placeholder place on the timeline), time, venue, seats, registration (our form / outside link / opening soon / closed / not needed), member year.
 
 ## 5. Repositories
 
-**fable-cms** (`src/lib`): `contract.ts` (the data contract, copied verbatim to the site) · `event-logic.ts` (date and status rules, also copied) · `snapshot.ts` (database rows -> validated snapshot) · `publish.ts` (validate, save, trigger, roll back) · `roles.ts` · `forms.ts` (form -> row, same rules) · `admins.ts` · `csv.ts` · `auth.ts` · `supabase/` clients. Screens in `src/app/(admin)`. SQL in `supabase/migrations` (0001-0006). Scripts in `scripts/` (seed placeholders, import board, publish from the command line, run SQL).
+**fable-cms** (`src/lib`): `contract.ts` (the data contract, copied verbatim to the site) · `event-logic.ts` (date and status rules, also copied) · `snapshot.ts` (database rows -> validated snapshot) · `publish.ts` (validate, save, trigger, roll back) · `roles.ts` · `forms.ts` (form -> row, same rules) · `admins.ts` · `csv.ts` · `auth.ts` · `supabase/` clients. `applications.ts` (review steps, reply drafts, the alert email) · `mail.ts` (Resend). Screens in `src/app/(admin)`; the database's alert hook in `src/app/api/hooks/new-application`. SQL in `supabase/migrations` (0001-0011, see its README). Scripts in `scripts/` (run SQL, backup and restore, seed placeholders, import board, publish from the command line, live tests).
 
 **fable-site**: `src/lib/contract.ts`, `event-logic.ts` (copies) · `content.ts` (release -> page data) · `events.ts`, `members.ts` (types and helpers) · `submissions.ts`, `submit-route.ts` (form validation and the database insert) · `app/api/applications`, `app/api/registrations` · `scripts/pull-snapshot.mjs` · pages in `src/app/(site)` · components in `src/components`.
 
@@ -116,24 +123,42 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | `SUPABASE_SERVICE_ROLE_KEY` (the secret key) | CMS `.env.local` and CMS Vercel only | **Yes.** Never on the public site, never in chat. Used only by local maintenance scripts and tests; the CMS app itself acts as the signed-in person. |
 | `VERCEL_DEPLOY_HOOK_URL` | CMS Vercel and CMS `.env.local` only | **Yes.** |
 | `DATABASE_URL` (direct Postgres string) | CMS `.env.local`, optional | **Yes.** Only for `scripts/db.mjs` and the role tests. |
-| `RESEND_API_KEY`, `MAIL_FROM` | CMS only, optional | Key is **secret**. For emailing answers to questions; without them the CMS offers a mailto link. |
+| `RESEND_API_KEY`, `MAIL_FROM` | CMS Vercel env | Key is **secret**. Application alerts and emailed answers; without them alerts fail and the Questions screen offers a mailto link. Set up 2026-11-03 (domain verified in Resend; Zoho keeps the inbox). |
+| `APPLICATION_HOOK_SECRET` | CMS Vercel env, plus the Supabase vault as `application_hook_secret` | **Yes.** Must match in both places ([RECOVERY.md](RECOVERY.md) 3.7). |
+| `IMAGEKIT_URL_ENDPOINT`, `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY` | CMS Vercel env, CMS `.env.local` | Only the private key is **secret** (it signs uploads). |
+
+Where each one comes from and how to replace it: [RECOVERY.md](RECOVERY.md) sections 1 and 3.
 
 ## 7. Security summary
 - Row level security on every table; the public key can read exactly one thing (the newest release) and INSERT into two tables.
 - Authorisation lives in the database (`role_rank()`), not in the app; the app mirrors it.
 - Form posts: origin check, size limit, honeypot, strict validation, database constraints behind it, per-person and global rate limits.
-- Headers: CSP-style security headers on the CMS; no cookies on the public site.
+- Headers: security headers on the CMS, and on the public site a Content-Security-Policy plus nosniff, referrer, permissions and HSTS headers (`next.config.ts` there); no cookies on the public site.
+- Lock-out guard: the database refuses any statement that would leave no owner (migration 0011). Backups: `npm run backup` / `npm run restore`.
+- The alert hook only accepts calls carrying the vault secret; the site's form routes gained no new secrets.
 - Releases are validated twice (before saving and again at build); publishing is rate limited; history is immutable; rollbacks are new releases.
 - The site's only runtime database access is the two insert routes.
 
 ## 8. Tests (what proves it works)
-- **CMS unit tests** (`npm test`): 105 tests: contract, date/status rules, snapshot builder, publish (including failure paths), rollback, forms, roles matrix, admin safety rules, CSV.
-- **Site unit tests** (`npm test`): 31 tests: release -> page data, announcements, validation, the two API routes.
-- **Live tests** (`npm run test:live`, CMS repo): what the public key can and cannot do on the real database (20 checks), sign-up paths and limits, and the full publish drill (add event -> publish -> real Vercel rebuild -> check the live pages -> remove -> publish -> gone). Test rows use a `zz-` prefix and clean up after themselves.
+- **CMS unit tests** (`npm test`): 138 tests: contract, date/status rules, snapshot builder, publish (including failure paths, the atomic RPC and its fallback), rollback, forms, roles matrix, admin safety rules, CSV, application review and the alert email.
+- **Site unit tests** (`npm test`): 62 tests: release -> page data, announcements, validation, the form routes, recruitment state, event media, the loading screen.
+- **Live tests** (`npm run test:live`, CMS repo): what the public key can and cannot do on the real database (20 checks), sign-up paths and limits, and the full publish drill (add event -> publish -> real Vercel rebuild -> check the live pages -> remove -> publish -> gone). Test rows use a `zz-` prefix and clean up after themselves. The publish drill uses the database server's clock (a wrong PC clock once turned its one-minute wait into hours).
 - **Role tests** (`tests/live/roles.live.test.ts`): every level against every table inside a rolled-back transaction. Needs `DATABASE_URL`; skipped otherwise.
 - Mutation checks were run on the date rules and the contract tests (deliberate bugs were caught).
 
-## 9. Status report (2026-10-17)
+## 9. Status report (2026-11-03)
+
+| Area | State |
+|---|---|
+| Public site | Live. Static, validated releases, recruitment states, Endfield-style home (loading screen, events media stage, point-cloud aims, people stage), link previews, security headers. |
+| Publishing | Proven end to end (live drill 4/4 on 2026-11-03). Atomic publish written (0009, not applied yet; safe fallback in place). |
+| Sign-ups | Applications (recruitment form, one per reg. no. per intake), registrations, questions: live and rate limited. |
+| Application alerts | Live (0010): each application emails contact@ through Resend. Tested end to end from the site form. |
+| Access | Four levels (0006); lock-out guard (0011); recovery runbook. |
+| Media | Supabase storage today; ImageKit move planned (fable-cms#1, fable-site#1); keys are in place. |
+| Content | Mostly placeholder until the club sends real events, bios and photos (fable-site#2, #3). |
+
+### Earlier status (2026-10-17)
 
 | Area | State |
 |---|---|

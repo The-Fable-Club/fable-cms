@@ -1,6 +1,6 @@
 # Who can do what
 
-Last checked: 2026-10-17.
+Last checked: 2026-11-03. Locked out? See [RECOVERY.md](RECOVERY.md) section 2.
 
 ## Two separate doors
 
@@ -22,12 +22,16 @@ Four levels. Each includes everything below it. Enforced by the database (migrat
 | **Admin** | + edit everything (live events, members, sign-up status and notes), take drafts live, publish, see release history. Cannot manage people. |
 | **Owner** | + add, remove and re-level people, retry a rebuild, roll back to an old release. |
 
-Rules: nobody can change their own level (an owner cannot demote themselves); the last owner can never be removed or demoted; only owners see the People screen.
+Rules: nobody can change their own level (an owner cannot demote themselves); the last owner can never be removed or demoted; only owners see the People screen. Since migration 0011 the database itself also refuses any statement that would leave no owner, and refuses `truncate admins`.
 
 | GitHub | Level | Added by |
 |---|---|---|
 | haise-727 | owner | bootstrap |
 | sharann-del | owner | haise-727 (2026-10-17) |
+| dhritivaz | owner | People screen |
+| silversouls226 | admin | People screen |
+
+This table is a snapshot (2026-11-03); the live list is the People screen or `select * from admins;`.
 
 - The `ADMIN_GITHUB_USERNAMES` value in `.env.local` is only a leftover note. The table decides.
 - Usernames are stored lower-case and matched lower-case.

@@ -36,8 +36,9 @@ npm run dev -- -p 3200
 ```
 Open http://localhost:3200 → **Sign in with GitHub**. As `Haise-727` you should land on the dashboard with an `OWNER` badge. Any other GitHub account is signed straight back out with "isn't on the admin list".
 
-## Adding another admin later
-Until the Admins screen exists, add them in the Supabase SQL editor (GitHub username in lower case):
+## Adding people later
+Owners use the CMS **People** screen. In SQL (GitHub username in lower case; levels: member, creator, admin, owner, see [ACCESS.md](ACCESS.md)):
 ```sql
-insert into admins (github_username, role, added_by) values ('their-username', 'editor', 'haise-727');
+insert into admins (github_username, role, added_by) values ('their-username', 'creator', 'haise-727');
 ```
+Locked out or sign-in broken: [RECOVERY.md](RECOVERY.md).
