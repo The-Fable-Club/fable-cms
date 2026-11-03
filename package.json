@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed": "tsx scripts/seed-placeholders.mts",
-    "test:live": "node scripts/run-live-tests.mjs"
+    "test:live": "node scripts/run-live-tests.mjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
