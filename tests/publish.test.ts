@@ -42,6 +42,16 @@ describe("publish", () => {
     expect(calls.hook).not.toHaveBeenCalled();
   });
 
+  it("someone else published a moment ago: the database refuses, nothing is deployed", async () => {
+    // both passed the early check; the locked check in the database lets only one through
+    const { d, calls } = deps({ insertRelease: async (r) => { calls.insert(r); return { retryAfterSeconds: 58 }; } });
+    const r = await publish(d, { by: "x" });
+    expect(r).toEqual({ ok: false, reason: "rate_limited", retryAfterSeconds: 58 });
+    expect(calls.insert).toHaveBeenCalledTimes(1);
+    expect(calls.hook).not.toHaveBeenCalled();
+    expect(calls.record).not.toHaveBeenCalled();
+  });
+
   it("allows publishing once a minute has passed", async () => {
     const { d } = deps({ lastPublishedAt: async () => new Date("2026-10-17T09:58:59Z") });
     expect((await publish(d, { by: "x" })).ok).toBe(true);
@@ -128,6 +138,13 @@ describe("republish (rollback)", () => {
     const r = await republish(bad.d, { by: "x", releaseId: 1 });
     expect(r).toMatchObject({ ok: false, reason: "invalid" });
     expect(bad.calls.insert).not.toHaveBeenCalled();
+  });
+  it("re-publish is refused the same way when the database says someone just published", async () => {
+    const { republish } = await import("@/lib/publish");
+    const { d, calls } = deps({ insertRelease: async () => ({ retryAfterSeconds: 12 }) });
+    const r = await republish({ ...d, loadRelease: async () => good as never }, { by: "x", releaseId: 1 });
+    expect(r).toEqual({ ok: false, reason: "rate_limited", retryAfterSeconds: 12 });
+    expect(calls.hook).not.toHaveBeenCalled();
   });
   it("respects the one-per-minute limit", async () => {
     const { republish } = await import("@/lib/publish");

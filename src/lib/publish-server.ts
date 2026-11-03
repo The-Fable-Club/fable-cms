@@ -2,11 +2,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
 import type { Snapshot } from "@/lib/contract";
-import type { PublishDeps, RepublishDeps } from "@/lib/publish";
+import { MIN_SECONDS_BETWEEN_PUBLISHES, type PublishDeps, type RepublishDeps } from "@/lib/publish";
 import type { EventRow, MemberRow, QuestionRow } from "@/lib/snapshot";
 
 /** PostgREST / Postgres "table does not exist" (a migration not applied yet). */
 export const isMissingTable = (e: { code?: string }) => e.code === "42P01" || e.code === "PGRST205";
+/** PostgREST / Postgres "function does not exist" (migration 0009 not applied yet). */
+export const isMissingFunction = (e: { code?: string }) => e.code === "42883" || e.code === "PGRST202";
 
 /** Real dependencies for publish(): the signed-in admin's own session (row level security applies) and the deploy hook from the environment. */
 export async function publishDeps(): Promise<PublishDeps> {
@@ -41,6 +43,23 @@ export async function publishDeps(): Promise<PublishDeps> {
       return data ? new Date(data.published_at) : null;
     },
     async insertRelease({ snapshot, note, publishedBy }) {
+      // Locked check-and-insert in the database (0009). Row level security still applies: it runs as the signed-in admin.
+      const rpc = await supabase.rpc("publish_release", {
+        p_snapshot: snapshot,
+        p_note: note,
+        p_published_by: publishedBy,
+        p_schema_version: snapshot.schema_version,
+        p_min_seconds: MIN_SECONDS_BETWEEN_PUBLISHES,
+      });
+      if (!rpc.error) {
+        const row = (Array.isArray(rpc.data) ? rpc.data[0] : rpc.data) as { release_id: number | string | null; retry_after_seconds: number } | undefined;
+        if (!row) return fail("Could not save the release", "no row returned");
+        if (row.release_id === null) return { retryAfterSeconds: Math.max(1, row.retry_after_seconds) };
+        return { id: Number(row.release_id) };
+      }
+      if (!isMissingFunction(rpc.error)) return fail("Could not save the release", rpc.error.message);
+
+      // Before 0009: the plain insert (the early check above is then the only limit).
       const { data, error } = await supabase
         .from("releases")
         .insert({ snapshot, note, published_by: publishedBy, schema_version: snapshot.schema_version, deploy_state: "triggered" })

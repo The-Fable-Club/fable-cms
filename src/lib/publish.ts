@@ -6,8 +6,14 @@ export type PublishDeps = {
   supabaseUrl: string;
   now: () => Date;
   loadRows: () => Promise<{ events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[] }>;
+  /** A quick early check, so a refused publish does not build the snapshot first. */
   lastPublishedAt: () => Promise<Date | null>;
-  insertRelease: (r: { snapshot: Snapshot; note: string | null; publishedBy: string }) => Promise<{ id: number }>;
+  /**
+   * Save the release. The database re-checks the one-minute limit under a lock in the same
+   * transaction (migration 0009), so two people publishing at once cannot both get through:
+   * the second one gets `retryAfterSeconds` instead of an id.
+   */
+  insertRelease: (r: { snapshot: Snapshot; note: string | null; publishedBy: string }) => Promise<{ id: number } | { retryAfterSeconds: number }>;
   /** null = no deploy hook configured. */
   hookUrl: string | null;
   fetchHook: (url: string) => Promise<{ status: number }>;
@@ -42,7 +48,9 @@ export async function publish(deps: PublishDeps, input: { by: string; note?: str
     if (!built.ok) return { ok: false, reason: "invalid", problems: built.problems };
 
     const note = input.note?.trim() || null;
-    const { id } = await deps.insertRelease({ snapshot: built.snapshot, note, publishedBy: input.by });
+    const saved = await deps.insertRelease({ snapshot: built.snapshot, note, publishedBy: input.by });
+    if ("retryAfterSeconds" in saved) return { ok: false, reason: "rate_limited", retryAfterSeconds: saved.retryAfterSeconds };
+    const { id } = saved;
     const counts = { events: built.snapshot.events.length, members: built.snapshot.members.length };
 
     const deploy = await triggerDeploy(deps, id);
@@ -100,7 +108,9 @@ export async function republish(deps: RepublishDeps, input: { by: string; releas
         problems: check.error.issues.slice(0, 10).map((i) => ({ entity: "release" as const, label: `Release #${input.releaseId}`, field: i.path.join("."), message: i.message })),
       };
     }
-    const { id } = await deps.insertRelease({ snapshot: check.data, note: `Re-publish of release #${input.releaseId}`, publishedBy: input.by });
+    const saved = await deps.insertRelease({ snapshot: check.data, note: `Re-publish of release #${input.releaseId}`, publishedBy: input.by });
+    if ("retryAfterSeconds" in saved) return { ok: false, reason: "rate_limited", retryAfterSeconds: saved.retryAfterSeconds };
+    const { id } = saved;
     const deploy = await triggerDeploy(deps, id);
     return { ok: true, releaseId: id, counts: { events: check.data.events.length, members: check.data.members.length }, ...deploy };
   } catch (e) {
