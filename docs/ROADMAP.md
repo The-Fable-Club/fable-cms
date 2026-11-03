@@ -1,6 +1,8 @@
 # Roadmap: what is done, what is left, suggestions
 
-Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
+Last updated 2026-11-03. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+Open work is tracked as GitHub issues: [CMS](https://github.com/The-Fable-Club/fable-cms/issues) and [site](https://github.com/The-Fable-Club/fable-site/issues). The tables below are the background.
 
 ## Is the backend finished?
 **Yes for everything the club needs to run: publishing, events, people, sign-ups, access control.** What remains is small and mostly optional:
@@ -16,12 +18,13 @@ Last updated 2026-10-17. How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Item | Notes |
 |---|---|
 | College-format fields | The club wants event and member details adjusted to the college's formats; needs the list of fields first. |
-| Media (photos) end to end | Upload control, WebP resize, bucket and rules exist. Needs one real upload test in a signed-in browser. You said later. |
+| Media (photos and clips) | Moving to ImageKit, with the media table as the record: [#1](https://github.com/The-Fable-Club/fable-cms/issues/1). Today's Supabase upload control has never been tested end to end. |
+| Atomic publish | Migration 0009 (`publish_release()`, written, not applied): one publisher at a time under an advisory lock. [#3](https://github.com/The-Fable-Club/fable-cms/issues/3) |
 | Participant hub privacy | Decided to stay public (no student accounts), so participants can download materials. Do not post anything private in a hub. |
 | Club text and aims in the CMS | They live in `content/club.json` and `aims.json` in the site repo (edit and push). The tables exist; a screen is a small job. |
 | Organisation check at sign-in | Optional hardening: also require current GitHub org membership. Needs a server-side GitHub token. |
 | Capacity and waitlists | "Seats" is text only. Registrations are not capped. |
-| Notifications | No email to editors on a new application or to people who register. |
+| Notifications | Email to the club for each new application: [#2](https://github.com/The-Fable-Club/fable-cms/issues/2) (needs Resend). No email to people who register. |
 | Dashboard accuracy | "Unpublished changes" ignores deleted rows. |
 | Soft 404 | `/events/<unknown>` answers HTTP 200 with a not-found page (a Next.js streaming detail). |
 | Backups | Supabase's free plan has no point-in-time recovery. Download the two CSV exports now and then, or add a scheduled export. |
@@ -38,9 +41,9 @@ Done: static pages from releases, tentative/TBA dates, registration states, "Liv
 
 Still open (all on your side, none blocks the backend):
 - **A real 3D object** for "What we're for" (see suggestions). The viewer samples a model into points; the five current shapes are procedural stand-ins.
-- **Member backgrounds** for the People section (see suggestions).
+- ~~Member backgrounds~~ built (generated SVG motifs, slowly drifting).
 - Real copy, photos, and removing the `Placeholder` markers once content is final.
-- Fonts licence check before wide launch.
+- Fonts: used as they are (the club's call, 2026-11-02).
 
 ## Suggestions
 ### Free 3D objects
