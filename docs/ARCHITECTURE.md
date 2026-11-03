@@ -101,7 +101,7 @@ Rules: nobody can change their own level; the last owner can never be removed or
 | Faculty, board, leads, members | Supabase `members` (group + order) | Release snapshot, at publish |
 | Club text (tagline, about, stats), aims | `content/club.json`, `content/aims.json` in the site repo | In the build (edit the file, push) |
 | Applications, registrations | Supabase tables | Never public; editors read them in the CMS |
-| Photos | Supabase Storage bucket `media` (public read) today; moving to ImageKit (fable-cms#1) | URL inside the snapshot |
+| Photos | Supabase Storage bucket `media` (public read) today; moving to ImageKit (fable-cms#1; `media` table carries provider/file_id/kind/duration since migration 0014) | URL inside the snapshot |
 | Recruitment state (open / soon / closed, dates, task) | `content/club.json` in the site repo | In the build; the form route re-checks on every submission |
 | Offline fallback | `content/seed/snapshot.json` in the site repo | Used by local builds with no network, and before the very first publish |
 
