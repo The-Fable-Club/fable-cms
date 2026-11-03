@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 
 // Pages that work without a session. Everything else needs one.
-const PUBLIC_PATHS = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/];
+const PUBLIC_PATHS = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/hooks\//];
 
 /**
  * Runs on every request (see src/proxy.ts): refreshes the Supabase session

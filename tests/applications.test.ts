@@ -5,6 +5,7 @@ import {
   countByStatus,
   filterQuery,
   matches,
+  newApplicationMail,
   parseFilters,
   replyMailto,
   whatsappLink,
@@ -88,5 +89,25 @@ describe("replyMailto", () => {
     expect(q.get("cc")).toBe("contact@thefableclub.com");
     expect(q.get("body")).toMatch(/^Hi Ada,/);
     expect(m).not.toContain("+");
+  });
+});
+
+describe("newApplicationMail", () => {
+  it("names the applicant and team, lists the answers and links to the CMS search", () => {
+    const m = newApplicationMail(a({ team: "Agentic AI", phone: "98765 43210", build: "A timetable bot", task: "Summarise notes" }));
+    expect(m.subject).toBe("New application: Ada Lovelace (Agentic AI)");
+    expect(m.text).toContain("Reg. no.: 25BCE1234");
+    expect(m.text).toContain("Phone: 98765 43210");
+    expect(m.text).toContain("Short task: Summarise notes");
+    expect(m.text).toContain("https://cms.thefableclub.com/applications?q=25BCE1234");
+    expect(m.text).not.toMatch(/\n{3,}/);
+  });
+
+  it("leaves out answers that are empty", () => {
+    const m = newApplicationMail(a({ team: null, phone: null, build: null, task: null }));
+    expect(m.subject).toBe("New application: Ada Lovelace");
+    expect(m.text).not.toContain("Phone:");
+    expect(m.text).not.toContain("Short task");
+    expect(m.text).not.toMatch(/\n{3,}/);
   });
 });

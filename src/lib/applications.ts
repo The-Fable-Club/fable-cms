@@ -120,6 +120,33 @@ export const REPLIES = {
 } as const;
 export type ReplyKind = keyof typeof REPLIES;
 
+/** The alert the club mailbox gets for each new application (sent by /api/hooks/new-application). */
+export function newApplicationMail(a: Application, cmsUrl = "https://cms.thefableclub.com"): { subject: string; text: string } {
+  const line = (label: string, v: string | null | undefined) => (v ? `${label}: ${v}` : null);
+  const text = [
+    `${a.name} applied to The Fable Club${a.intake ? ` (${a.intake} intake)` : ""}.`,
+    "",
+    line("Reg. no.", a.reg_no),
+    line("Email", a.email),
+    line("Phone", a.phone),
+    line("Department", a.department),
+    line("Year", a.year),
+    line("Team", a.team),
+    "",
+    line("What they want to build", a.build),
+    "",
+    line("Why they want to join", a.why),
+    "",
+    line("Short task", a.task),
+    "",
+    `Open it in the CMS: ${cmsUrl}/applications${filterQuery({ status: "all", team: "all", intake: a.intake ?? "all", q: a.reg_no })}`,
+  ]
+    .filter((l) => l !== null)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n"); // a section with nothing in it leaves no gap
+  return { subject: `New application: ${a.name}${a.team ? ` (${a.team})` : ""}`, text };
+}
+
 export function replyMailto(kind: ReplyKind, a: Application): string {
   const r = REPLIES[kind];
   const q = new URLSearchParams({ cc: CLUB_EMAIL, subject: r.subject, body: r.body(a) });
