@@ -11,7 +11,12 @@
     "seed": "tsx scripts/seed-placeholders.mts",
     "test:live": "node scripts/run-live-tests.mjs",
     "backup": "node scripts/backup.mjs",
-    "restore": "node scripts/restore.mjs"
+    "restore": "node scripts/restore.mjs",
+    "dev:staging": "node scripts/with-env.mjs --staging next dev -p 3201",
+    "test:live:staging": "node scripts/with-env.mjs --staging node scripts/run-live-tests.mjs",
+    "db:staging": "node scripts/with-env.mjs --staging node scripts/db.mjs",
+    "backup:staging": "node scripts/with-env.mjs --staging node scripts/backup.mjs",
+    "seed:staging": "node scripts/with-env.mjs --staging npx tsx scripts/seed-placeholders.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

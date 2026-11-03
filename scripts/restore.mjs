@@ -5,6 +5,7 @@
 // Needs DATABASE_URL in .env.local. See docs/RECOVERY.md.
 import { readFileSync } from "node:fs";
 import pg from "pg";
+import { loadEnv } from "./env-file.mjs";
 
 const arg = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -23,7 +24,7 @@ if (!Array.isArray(rows)) {
   process.exit(2);
 }
 
-process.loadEnvFile(new URL("../.env.local", import.meta.url));
+loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 const url = new URL(process.env.DATABASE_URL);
 url.searchParams.delete("sslmode");
 const client = new pg.Client({ connectionString: url.toString(), ssl: { rejectUnauthorized: false } });

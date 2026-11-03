@@ -5,8 +5,9 @@
 // Restore with scripts/restore.mjs (see docs/RECOVERY.md). Needs DATABASE_URL in .env.local.
 import { mkdirSync, writeFileSync } from "node:fs";
 import pg from "pg";
+import { loadEnv } from "./env-file.mjs";
 
-process.loadEnvFile(new URL("../.env.local", import.meta.url));
+const ENV = loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set in .env.local (see scripts/db.mjs)");
   process.exit(2);
@@ -27,7 +28,7 @@ try {
   }
   const dir = new URL("../backups/", import.meta.url);
   mkdirSync(dir, { recursive: true });
-  const name = `${out.taken_at.slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  const name = `${ENV.staging ? "staging-" : ""}${out.taken_at.slice(0, 19).replace(/[:T]/g, "-")}.json`;
   writeFileSync(new URL(name, dir), JSON.stringify(out, null, 1));
   console.log(`saved backups/${name}`);
 } finally {

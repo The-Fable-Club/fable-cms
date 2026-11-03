@@ -4,12 +4,9 @@
 // admin rows and test data never reach the real tables.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
+import { loadEnv } from "../../scripts/env-file.mjs";
 
-try {
-  process.loadEnvFile(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
-} catch {
-  /* no .env.local */
-}
+loadEnv(); // .env.local, or ENV_FILE=.env.staging.local
 const HAS_DB = Boolean(process.env.DATABASE_URL);
 
 type Role = "member" | "creator" | "admin" | "owner";
