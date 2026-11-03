@@ -71,7 +71,22 @@ A second, free Supabase project (for example `fable-staging`) with the same migr
 - Supabase's free plan allows two active free projects, so production plus staging fits.
 - Settings live in `.env.staging.local` (git-ignored), with the same variable names as `.env.local`, pointing at the staging project.
 - Staging has **no** deploy hook to the real site, no Resend key (alerts there just fail quietly) and no ImageKit private key, unless a test needs one, and then only test keys.
-- How to run things against it is in the README once set up.
+- Set up 2026-11-03: project ref `sizgsemhrekjpzqyuixa`, migrations 0001-0012 applied, placeholder events and members seeded, one release published (no rebuild). Its structure was checked against production (same policies, functions, triggers, columns and grants).
+- New migrations go to **staging first**: `npm run db:staging -- --file supabase/migrations/00NN_x.sql`, then production after `npm run backup`.
+
+| Command | What it does on staging |
+|---|---|
+| `npm run test:live:staging` | The live suite (security, roles, questions). The publish drill is skipped: it needs the deploy hook and checks the real site |
+| `npm run db:staging -- --sql "..."` / `--file x.sql` | Run SQL |
+| `npm run seed:staging` | Placeholder events and members (doesn't touch the site's seed file) |
+| `npm run backup:staging` | Backup to `backups/staging-<date>.json` |
+| `npm run dev:staging` | The CMS on http://localhost:3201 against staging |
+| `node scripts/with-env.mjs --staging <command>` | Anything else, e.g. `node scripts/with-env.mjs --staging npx tsx scripts/publish-now.mts "note"` |
+
+- The switch is `ENV_FILE` (`scripts/env-file.mjs`): every script and live test reads `.env.local` unless `ENV_FILE` names another file. A staging file that points at the production project is refused.
+- `dev:staging` blanks every setting that exists only in `.env.local` (deploy hook, Resend, ImageKit, hook secret), so production keys can't leak into a staging run.
+- **Signing in to the CMS on staging** needs the GitHub provider turned on in the staging project (Authentication → Providers → GitHub, with its own OAuth app whose callback is `https://sizgsemhrekjpzqyuixa.supabase.co/auth/v1/callback`). Until then, access levels are tested at the database level (`tests/live/roles.live.test.ts` signs in as each level inside rolled-back transactions).
+- Alert emails never send from staging (no vault secret, no Resend key).
 
 ## 6. Reporting
 
