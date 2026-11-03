@@ -5,8 +5,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { buildSnapshot, type EventRow, type MemberRow } from "../src/lib/snapshot";
+import { loadEnv } from "./env-file.mjs";
 
-process.loadEnvFile(resolve(import.meta.dirname, "../.env.local"));
+const ENV = loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SITE_SEED = resolve(import.meta.dirname, "../../fable-site/content/seed/snapshot.json");
@@ -63,7 +64,12 @@ if (process.argv.includes("--remove")) {
   const [evRows, memRows] = await Promise.all([rest("events?select=*"), rest("members?select=*")]);
   const built = buildSnapshot({ events: evRows as EventRow[], members: memRows as MemberRow[] }, { supabaseUrl: URL });
   if (!built.ok) { console.error(built.problems); process.exit(1); }
-  mkdirSync(dirname(SITE_SEED), { recursive: true });
-  writeFileSync(SITE_SEED, JSON.stringify(built.snapshot, null, 2) + "\n");
-  console.log(`seeded ${evRows.length} events, ${memRows.length} members; wrote ${SITE_SEED}`);
+  if (ENV.staging) {
+    // the site's offline fallback follows production only
+    console.log(`seeded ${evRows.length} events, ${memRows.length} members into ${ENV.name}`);
+  } else {
+    mkdirSync(dirname(SITE_SEED), { recursive: true });
+    writeFileSync(SITE_SEED, JSON.stringify(built.snapshot, null, 2) + "\n");
+    console.log(`seeded ${evRows.length} events, ${memRows.length} members; wrote ${SITE_SEED}`);
+  }
 }

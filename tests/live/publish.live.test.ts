@@ -5,8 +5,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { publish, type PublishDeps } from "@/lib/publish";
 import type { EventRow, MemberRow, QuestionRow } from "@/lib/snapshot";
+import { loadEnv } from "../../scripts/env-file.mjs";
 
-process.loadEnvFile?.(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+const ENV = loadEnv(); // .env.local, or ENV_FILE=.env.staging.local
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const HOOK = process.env.VERCEL_DEPLOY_HOOK_URL!;
@@ -88,7 +89,8 @@ afterAll(async () => {
   await rest(`events?slug=eq.${SLUG}`, { method: "DELETE" }); // never leave the test event behind
 });
 
-describe("publish -> rebuild -> live site", () => {
+// It needs the deploy hook and checks www.thefableclub.com, so it only runs against production.
+describe.skipIf(ENV.staging || !HOOK)("publish -> rebuild -> live site", () => {
   it("a failing deploy hook still saves the release and says it failed", async () => {
     await waitForRateLimit();
     const r = await publish(deps("https://api.vercel.com/v1/integrations/deploy/prj_does_not_exist/nope"), { by: "live-test", note: "hook failure drill" });

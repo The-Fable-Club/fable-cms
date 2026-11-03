@@ -1,11 +1,11 @@
 // Publish from the command line with the service key (same publish() the CMS button uses).
 // For maintenance and migrations; day to day, use the Publish button in the CMS.
 //   npx tsx scripts/publish-now.mts "note about this release"
-import { resolve } from "node:path";
 import { publish, type PublishDeps } from "../src/lib/publish";
 import type { EventRow, MemberRow, QuestionRow } from "../src/lib/snapshot";
+import { loadEnv } from "./env-file.mjs";
 
-process.loadEnvFile(resolve(import.meta.dirname, "../.env.local"));
+loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 

@@ -2,8 +2,9 @@
 // access a visitor's browser has, and proves what it can and cannot do.
 // Run with: npm run test:live. Test rows use a zz-test- email and are removed afterwards.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { loadEnv } from "../../scripts/env-file.mjs";
 
-process.loadEnvFile?.(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+loadEnv(); // .env.local, or ENV_FILE=.env.staging.local
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;

@@ -2,8 +2,9 @@
 // Skipped until 0007 is applied. Test rows use zz-test- and are removed afterwards; the event's
 // EventHub link is put back as it was.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { loadEnv } from "../../scripts/env-file.mjs";
 
-process.loadEnvFile?.(new URL("../../.env.local", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+loadEnv(); // .env.local, or ENV_FILE=.env.staging.local
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;

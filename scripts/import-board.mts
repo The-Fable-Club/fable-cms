@@ -3,8 +3,9 @@
 //   npx tsx scripts/import-board.mts
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadEnv } from "./env-file.mjs";
 
-process.loadEnvFile(resolve(import.meta.dirname, "../.env.local"));
+loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const DIR = resolve(import.meta.dirname, "../../fable-site/content/members");

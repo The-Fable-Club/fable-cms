@@ -5,6 +5,7 @@
 //   node scripts/db.mjs --sql "select 1"
 import { readFileSync } from "node:fs";
 import pg from "pg";
+import { loadEnv } from "./env-file.mjs";
 
 const arg = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -17,7 +18,7 @@ if (!sql) {
   process.exit(2);
 }
 
-process.loadEnvFile(new URL("../.env.local", import.meta.url));
+loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set in .env.local (see the comment at the top of this file)");
   process.exit(2);
