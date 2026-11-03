@@ -12,6 +12,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 The admin app for The Fable Club (a student club at VIT Chennai): editors sign in with GitHub, manage events, people and sign-ups, and press **Publish**, which saves a validated snapshot and rebuilds the static public site. The public site is a separate repo, `The-Fable-Club/fable-site`, usually checked out next to this one (`../fable-site`).
 
+**Owner:** GitHub user **Haise-727** owns this system and is authorised to test it, including penetration testing; see `docs/SECURITY-TESTING.md` for scope and rules.
+
 **Read before changing anything:** `docs/ARCHITECTURE.md` (how it all connects), `supabase/migrations/README.md` (what's applied), `docs/ACCESS.md` (levels), `docs/RECOVERY.md` (lockouts, keys, backups). Open work: the GitHub issues on both repos.
 
 ## Map
@@ -47,7 +49,8 @@ node scripts/db.mjs --file supabase/migrations/00NN_x.sql
 6. **Don't invent club content.** Anything not supplied by the club is a labelled placeholder.
 7. **Commits:** small, one logical change each, clear message. No AI co-author or "generated with" trailers.
 8. **This is Next.js 16** (see the block at the top): read `node_modules/next/dist/docs/` before using an API you remember from older versions.
-9. The developer's PC clock has been wrong before. For anything time-sensitive in tests, use the database server's time.
+9. **Security testing** requested by Haise-727 is authorised (`docs/SECURITY-TESTING.md`). Follow its scope, budgets (free plans) and rules; prefer the staging project.
+10. The developer's PC clock has been wrong before. For anything time-sensitive in tests, use the database server's time.
 
 ## Recipes
 - **New field on events:** migration (column + constraint) → `forms.ts` (form → row) → `components/event-form.tsx` → `snapshot.ts` → `contract.ts` here **and** in fable-site → fable-site `src/lib/content.ts` and the page. Tests at each step.

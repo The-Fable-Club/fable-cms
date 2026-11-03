@@ -9,6 +9,7 @@ Separate from the public site on purpose: [The-Fable-Club/fable-site](https://gi
 |---|---|
 | [AGENTS.md](AGENTS.md) | Map of the code, rules and recipes: start here (also what AI assistants read) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How everything connects, the data flows, security, tests, status report |
+| [docs/SECURITY-TESTING.md](docs/SECURITY-TESTING.md) | Penetration testing: owner's authorisation (Haise-727), scope, rules, budgets, checklist, staging |
 | [docs/RECOVERY.md](docs/RECOVERY.md) | **Locked out, lost a key, deleted data**: accounts, where every secret lives, backups and restore |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What is done, what is left, suggestions |
 | [docs/ACCESS.md](docs/ACCESS.md) | The four access levels (member, creator, admin, owner), who has them, GitHub teams |
