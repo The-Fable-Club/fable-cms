@@ -5,11 +5,11 @@ import Link from "next/link";
 import type { MemberRow } from "@/lib/snapshot";
 import type { FormState } from "@/app/(admin)/form-state";
 import { ArtPicker, Field, ModeGroup, inputCls } from "@/components/form-bits";
-import { ImageField } from "@/components/image-field";
+import { MediaField } from "@/components/media-field";
 
 const blank: Omit<MemberRow, "id"> = {
   slug: "", name: "", role: "", group: "Member", position: 100, department: "", year_mode: "pick", year: "", bio: "", focus: [], email: "",
-  show_email: false, linkedin: null, github: null, art: "sprouts", photo_path: null, archived: false,
+  show_email: false, linkedin: null, github: null, art: "sprouts", photo_path: null, photo_id: null, archived: false,
 };
 
 export function MemberForm({ action, member }: { action: (prev: FormState, form: FormData) => Promise<FormState>; member: Omit<MemberRow, "id"> | null }) {
@@ -105,7 +105,8 @@ export function MemberForm({ action, member }: { action: (prev: FormState, form:
         </div>
       </fieldset>
 
-      <ImageField name="photo_path" folder="members" defaultPath={m.photo_path} label="Photo (optional)" />
+      <input type="hidden" name="photo_path" value={m.photo_path ?? ""} />
+      <MediaField name="photo_id" kind="members" label="Photo (optional)" defaultIds={m.photo_id ? [m.photo_id] : []} max={{ image: 1, video: 0 }} />
       <ArtPicker defaultValue={m.art} />
 
       <label className="flex items-center gap-3">
