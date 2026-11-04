@@ -31,6 +31,7 @@ export const MIN_ROLE = {
   moderate_questions: "admin", // show an answer on the site, hide, email the asker, delete
   publish: "admin",
   view_releases: "admin",
+  clean_media: "admin", // delete uploaded files nothing uses any more
   rollback: "owner", // retry a rebuild, publish an old release again
   manage_people: "owner", // who can sign in, and at what level
 } as const satisfies Record<string, Role>;
@@ -58,6 +59,7 @@ export const NAV: { href: string; label: string; action: Action }[] = [
   { href: "/questions", label: "Questions", action: "read_questions" },
   { href: "/attendance", label: "Attendance", action: "read_signups" }, // UI only for now
   { href: "/releases", label: "Releases", action: "view_releases" },
+  { href: "/media", label: "Media", action: "clean_media" },
   { href: "/admins", label: "People", action: "manage_people" },
 ];
 export const navFor = (role: Role) => NAV.filter((n) => can(role, n.action));
