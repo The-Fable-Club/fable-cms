@@ -13,7 +13,7 @@ export const STATUS_LABEL: Record<AppStatus, string> = {
 };
 
 /** The teams applicants pick from on the Join page (fable-site src/lib/submissions.ts). */
-export const TEAMS = ["Web Development", "Agentic AI", "Technical", "Operations", "Finance", "Creative & Communications", "Not sure yet"] as const;
+export const TEAMS = ["Web Development", "Agentic AI", "Projects", "Operations", "Finance", "Creative & Communications", "Not sure yet"] as const;
 
 /** The intake the site files new applications under (fable-site content/club.json, recruitment.intake). */
 export const CURRENT_INTAKE = "2026-27";
