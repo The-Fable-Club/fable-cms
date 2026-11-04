@@ -101,7 +101,7 @@ Rules: nobody can change their own level; the last owner can never be removed or
 | Faculty, board, leads, members | Supabase `members` (group + order) | Release snapshot, at publish |
 | Club text (tagline, about, stats), aims | `content/club.json`, `content/aims.json` in the site repo | In the build (edit the file, push) |
 | Applications, registrations | Supabase tables | Never public; editors read them in the CMS |
-| Photos | Supabase Storage bucket `media` (public read) today; moving to ImageKit (fable-cms#1; `media` table carries provider/file_id/kind/duration since migration 0014) | URL inside the snapshot |
+| Pictures and loops | **ImageKit** (`/fable/events/<slug>/`, `/fable/members/<slug>/`). The browser uploads straight to ImageKit with a 2-minute signature from `/api/imagekit/auth` (creators and up); a `media` row records each file (migrations 0014, 0015); events link up to 1 loop + 2 pictures (`media_ids`), members one photo (`photo_id`). The old Supabase bucket stays for any older `photo_path` | Full ImageKit URLs inside the snapshot (schema 2); the site's next/image loader asks ImageKit for the size |
 | Recruitment state (open / soon / closed, dates, task) | `content/club.json` in the site repo | In the build; the form route re-checks on every submission |
 | Offline fallback | `content/seed/snapshot.json` in the site repo | Used by local builds with no network, and before the very first publish |
 
@@ -125,7 +125,8 @@ Uncertain details have placeholder modes so nothing is ever blocked on missing f
 | `DATABASE_URL` (direct Postgres string) | CMS `.env.local`, optional | **Yes.** Only for `scripts/db.mjs` and the role tests. |
 | `RESEND_API_KEY`, `MAIL_FROM` | CMS Vercel env | Key is **secret**. Application alerts and emailed answers; without them alerts fail and the Questions screen offers a mailto link. Set up 2026-11-03 (domain verified in Resend; Zoho keeps the inbox). |
 | `APPLICATION_HOOK_SECRET` | CMS Vercel env, plus the Supabase vault as `application_hook_secret` | **Yes.** Must match in both places ([RECOVERY.md](RECOVERY.md) 3.7). |
-| `IMAGEKIT_URL_ENDPOINT`, `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY` | CMS Vercel env, CMS `.env.local` | Only the private key is **secret** (it signs uploads). |
+| `IMAGEKIT_URL_ENDPOINT`, `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY` | CMS Vercel env, CMS `.env.local` (and `.env.staging.local` for staging tests) | Only the private key is **secret** (it signs uploads and lets the Media screen list and delete files). The site needs none of them. |
+| `IMAGEKIT_FOLDER_ROOT` | optional; staging sets `/fable-test` | No. Where uploads go; default `/fable`. |
 
 Where each one comes from and how to replace it: [RECOVERY.md](RECOVERY.md) sections 1 and 3.
 
@@ -155,7 +156,7 @@ Where each one comes from and how to replace it: [RECOVERY.md](RECOVERY.md) sect
 | Sign-ups | Applications (recruitment form, one per reg. no. per intake), registrations, questions: live and rate limited. |
 | Application alerts | Live (0010): each application emails contact@ through Resend. Tested end to end from the site form. |
 | Access | Four levels (0006); lock-out guard (0011); recovery runbook. |
-| Media | Supabase storage today; ImageKit move planned (fable-cms#1, fable-site#1); keys are in place. |
+| Media | **Built 2026-11-04** on ImageKit: upload field in the event and member forms, schema-2 releases, site loader and Events stage, Media clean-up screen. Nothing real uploaded yet. |
 | Content | Mostly placeholder until the club sends real events, bios and photos (fable-site#2, #3). |
 
 ### Earlier status (2026-10-17)
@@ -167,7 +168,7 @@ Where each one comes from and how to replace it: [RECOVERY.md](RECOVERY.md) sect
 | Sign-ups (applications, registrations) | Built, rate limited, proven live. |
 | CMS screens | Events (with drafts), members, applications, registrations, releases, people, dashboard. |
 | Access levels | **Built; migration 0006 must be applied** (SQL editor) before the four levels exist in the database. Until then the CMS falls back to owner/admin. |
-| Media (photos) | Bucket, rules and the upload control are built; not exercised end to end yet. |
+| Media (pictures, loops) | Tested end to end on staging with real ImageKit uploads (upload → publish → site build → clean-up). |
 | VIT EventHub | Built (migration 0007): per-event link, poster short link + QR ([EVENTHUB.md](EVENTHUB.md)). We never handle VTOP credentials or payments. |
 | Attendance for OD | Screens only, no backend ([ATTENDANCE-FEASIBILITY.md](ATTENDANCE-FEASIBILITY.md)). |
 | Event questions / FAQ | Built (migration 0007): [EVENT-QA.md](EVENT-QA.md). |
