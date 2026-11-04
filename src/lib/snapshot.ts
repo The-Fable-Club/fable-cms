@@ -1,4 +1,5 @@
 import { SCHEMA_VERSION, Snapshot, SnapshotEvent, SnapshotMember } from "@/lib/contract";
+import { videoPoster } from "@/lib/media";
 import type { z } from "zod";
 
 // ---- database rows (only the columns the snapshot needs) --------------------------------
@@ -80,6 +81,18 @@ export type MemberRow = {
   archived: boolean;
 };
 
+/** A row of the `media` table (only what the snapshot needs). */
+export type MediaRow = {
+  id: number;
+  kind: string;
+  provider: string;
+  url: string | null;
+  width: number | null;
+  height: number | null;
+  duration: number | string | null;
+};
+export type MediaById = Map<number, MediaRow>;
+
 export type Problem = { entity: "event" | "member" | "release"; label: string; field: string; message: string };
 export type BuildResult = { ok: true; snapshot: Snapshot } | { ok: false; problems: Problem[] };
 
@@ -92,6 +105,26 @@ export function mediaUrl(supabaseUrl: string, path: string | null | undefined): 
 }
 
 // ---- row -> snapshot candidates (validated afterwards) -----------------------------------
+
+/** One media row as the snapshot carries it. Rows that are missing or not on ImageKit are left out. */
+function mediaItem(m: MediaRow | undefined) {
+  if (!m || m.provider !== "imagekit" || !m.url) return null;
+  const video = m.kind === "video";
+  return {
+    kind: video ? "video" : "image",
+    url: m.url,
+    width: m.width,
+    height: m.height,
+    duration: video && m.duration != null ? Number(m.duration) : null,
+    poster: video ? videoPoster(m.url) : null,
+  } as const;
+}
+
+/** An event's media in display order: the linked rows, the video first, then the pictures in their order. */
+export function eventMedia(ids: number[] | null | undefined, media: MediaById) {
+  const items = (ids ?? []).map((id) => mediaItem(media.get(Number(id)))).filter((m) => m !== null);
+  return [...items.filter((m) => m.kind === "video"), ...items.filter((m) => m.kind === "image")];
+}
 
 function hubItems(raw: unknown) {
   const list = Array.isArray(raw) ? raw : [];
@@ -110,7 +143,8 @@ function hubItems(raw: unknown) {
     .sort((a, b) => String(b.posted_at).localeCompare(String(a.posted_at)));
 }
 
-export function eventCandidate(r: EventRow, supabaseUrl: string, questions: QuestionRow[] = []) {
+export function eventCandidate(r: EventRow, supabaseUrl: string, questions: QuestionRow[] = [], media: MediaById = new Map()) {
+  const items = eventMedia(r.media_ids, media);
   const date =
     r.date_mode === "exact"
       ? { mode: "exact", start: r.start_date, end: r.end_date }
@@ -146,14 +180,17 @@ export function eventCandidate(r: EventRow, supabaseUrl: string, questions: Ques
       .filter(Boolean),
     highlights: (r.highlights ?? []).map((h) => h.trim()).filter(Boolean),
     art: r.art,
-    photo: mediaUrl(supabaseUrl, r.photo_path),
+    // picture 1 also stands as the event's single photo (link previews, older site code)
+    photo: items.find((m) => m.kind === "image")?.url ?? mediaUrl(supabaseUrl, r.photo_path),
     hub: hubItems(r.hub),
     eventhub: blank(r.eventhub_url),
     faq: faqFor(r.slug, questions),
+    media: items,
   };
 }
 
-export function memberCandidate(r: MemberRow, supabaseUrl: string) {
+export function memberCandidate(r: MemberRow, supabaseUrl: string, media: MediaById = new Map()) {
+  const photo = r.photo_id ? mediaItem(media.get(Number(r.photo_id))) : null;
   return {
     slug: r.slug,
     name: r.name,
@@ -170,7 +207,7 @@ export function memberCandidate(r: MemberRow, supabaseUrl: string) {
       github: blank(r.github),
     },
     art: r.art,
-    photo: mediaUrl(supabaseUrl, r.photo_path),
+    photo: photo?.kind === "image" ? photo.url : mediaUrl(supabaseUrl, r.photo_path),
   };
 }
 
@@ -198,15 +235,16 @@ function startOf(e: z.infer<typeof SnapshotEvent>): string {
  * is wrong nothing is built.
  */
 export function buildSnapshot(
-  rows: { events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[] },
+  rows: { events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[]; media?: MediaRow[] },
   opts: { supabaseUrl: string; now?: Date },
 ): BuildResult {
   const problems: Problem[] = [];
   const events: z.infer<typeof SnapshotEvent>[] = [];
   const members: z.infer<typeof SnapshotMember>[] = [];
+  const media: MediaById = new Map((rows.media ?? []).map((m) => [Number(m.id), m]));
 
   for (const row of rows.events.filter((r) => !r.archived && !r.draft)) {
-    const parsed = SnapshotEvent.safeParse(eventCandidate(row, opts.supabaseUrl, rows.questions ?? []));
+    const parsed = SnapshotEvent.safeParse(eventCandidate(row, opts.supabaseUrl, rows.questions ?? [], media));
     if (parsed.success) events.push(parsed.data);
     else problems.push(...issuesToProblems("event", row.title || row.slug, parsed.error.issues));
   }
@@ -215,7 +253,7 @@ export function buildSnapshot(
     .filter((r) => !r.archived)
     .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
   for (const row of memberRows) {
-    const parsed = SnapshotMember.safeParse(memberCandidate(row, opts.supabaseUrl));
+    const parsed = SnapshotMember.safeParse(memberCandidate(row, opts.supabaseUrl, media));
     if (parsed.success) members.push(parsed.data);
     else problems.push(...issuesToProblems("member", row.name || row.slug, parsed.error.issues));
   }

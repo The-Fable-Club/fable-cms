@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
 import type { Snapshot } from "@/lib/contract";
 import { MIN_SECONDS_BETWEEN_PUBLISHES, type PublishDeps, type RepublishDeps } from "@/lib/publish";
-import type { EventRow, MemberRow, QuestionRow } from "@/lib/snapshot";
+import type { EventRow, MediaRow, MemberRow, QuestionRow } from "@/lib/snapshot";
 
 /** PostgREST / Postgres "table does not exist" (a migration not applied yet). */
 export const isMissingTable = (e: { code?: string }) => e.code === "42P01" || e.code === "PGRST205";
@@ -22,19 +22,22 @@ export async function publishDeps(): Promise<PublishDeps> {
     supabaseUrl: url,
     now: () => new Date(),
     async loadRows() {
-      const [events, members, questions] = await Promise.all([
+      const [events, members, questions, media] = await Promise.all([
         supabase.from("events").select("*"),
         supabase.from("members").select("*"),
         supabase.from("event_questions").select("id, created_at, event_slug, question, answer, show_on_site, hidden").eq("show_on_site", true),
+        supabase.from("media").select("id, kind, provider, url, width, height, duration"),
       ]);
       if (events.error) fail("Could not read events", events.error.message);
       if (members.error) fail("Could not read members", members.error.message);
+      if (media.error) fail("Could not read media", media.error.message);
       // Before migration 0007 the questions table does not exist: publish without an FAQ rather than fail.
       if (questions.error && !isMissingTable(questions.error)) fail("Could not read questions", questions.error.message);
       return {
         events: (events.data ?? []) as EventRow[],
         members: (members.data ?? []) as MemberRow[],
         questions: (questions.error ? [] : (questions.data ?? [])) as QuestionRow[],
+        media: (media.data ?? []) as MediaRow[],
       };
     },
     async lastPublishedAt() {

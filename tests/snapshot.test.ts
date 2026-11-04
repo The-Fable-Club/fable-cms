@@ -23,7 +23,7 @@ describe("buildSnapshot", () => {
     const r = build([ev()], [mem()]);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.snapshot.schema_version).toBe(1);
+    expect(r.snapshot.schema_version).toBe(2);
     expect(r.snapshot.generated_at).toBe(now.toISOString());
     expect(r.snapshot.events[0].description).toEqual(["One.", "Two."]);
     expect(r.snapshot.events[0].highlights).toEqual(["a"]);
@@ -161,5 +161,49 @@ describe("EventHub link and FAQ in the snapshot", () => {
   it("works without any questions (before migration 0007)", () => {
     const r = build([ev()]);
     expect(r.ok && r.snapshot.events[0].faq).toEqual([]);
+  });
+});
+
+describe("media (schema 2)", () => {
+  const ik = "https://ik.imagekit.io/thefableclub/fable/events/x";
+  const media = [
+    { id: 1, kind: "image", provider: "imagekit", url: `${ik}/a.webp`, width: 1600, height: 900, duration: null },
+    { id: 2, kind: "video", provider: "imagekit", url: `${ik}/loop.mp4`, width: 1280, height: 720, duration: "6.0" },
+    { id: 3, kind: "image", provider: "imagekit", url: `${ik}/b.webp`, width: 1600, height: 900, duration: null },
+    { id: 4, kind: "image", provider: "supabase", url: null, width: 10, height: 10, duration: null },
+    { id: 5, kind: "image", provider: "imagekit", url: "https://ik.imagekit.io/thefableclub/fable/members/m/p.webp", width: 800, height: 800, duration: null },
+  ];
+  const withMedia = (events: EventRow[], members: MemberRow[] = []) => buildSnapshot({ events, members, media }, { supabaseUrl: URL, now });
+
+  it("puts the video first, then the pictures in their order, and picture 1 doubles as the photo", () => {
+    const r = withMedia([ev({ media_ids: [3, 2, 1] })]);
+    if (!r.ok) throw new Error(JSON.stringify(r.problems));
+    const e = r.snapshot.events[0];
+    expect(e.media.map((m) => m.url)).toEqual([`${ik}/loop.mp4`, `${ik}/b.webp`, `${ik}/a.webp`]);
+    expect(e.media[0]).toMatchObject({ kind: "video", duration: 6, poster: `${ik}/loop.mp4/ik-thumbnail.jpg` });
+    expect(e.media[1]).toMatchObject({ kind: "image", width: 1600, height: 900, poster: null, duration: null });
+    expect(e.photo).toBe(`${ik}/b.webp`);
+  });
+  it("skips missing rows and rows not on ImageKit", () => {
+    const r = withMedia([ev({ media_ids: [99, 4, 1] })]);
+    if (!r.ok) throw new Error(JSON.stringify(r.problems));
+    expect(r.snapshot.events[0].media.map((m) => m.url)).toEqual([`${ik}/a.webp`]);
+  });
+  it("events without media keep an empty list and the old photo", () => {
+    const r = withMedia([ev({ photo_path: "events/old.webp" })]);
+    if (!r.ok) throw new Error(JSON.stringify(r.problems));
+    expect(r.snapshot.events[0].media).toEqual([]);
+    expect(r.snapshot.events[0].photo).toBe(mediaUrl(URL, "events/old.webp"));
+  });
+  it("a member's photo comes from photo_id when set", () => {
+    const r = withMedia([], [mem({ photo_id: 5 })]);
+    if (!r.ok) throw new Error(JSON.stringify(r.problems));
+    expect(r.snapshot.members[0].photo).toBe("https://ik.imagekit.io/thefableclub/fable/members/m/p.webp");
+    const v = withMedia([], [mem({ photo_id: 2 })]); // a video is never a photo
+    expect(v.ok && v.snapshot.members[0].photo).toBe(null);
+  });
+  it("too many media in a hand-edited row is caught before publishing", () => {
+    const r = withMedia([ev({ media_ids: [1, 3, 5] })]);
+    expect(r.ok).toBe(false);
   });
 });
