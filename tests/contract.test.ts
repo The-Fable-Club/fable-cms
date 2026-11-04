@@ -131,9 +131,29 @@ describe("Snapshot", () => {
     passes(Snapshot, snap());
     passes(Snapshot, snap({ events: [], members: [] }));
   });
-  it("rejects a wrong or missing schema version", () => {
-    fails(Snapshot, snap({ schema_version: 2 }));
+  it("accepts schema versions 1 to the current one, and nothing else", () => {
+    expect(Snapshot.safeParse(snap({ schema_version: 1 })).success).toBe(true);
+    expect(Snapshot.safeParse(snap({ schema_version: 2 })).success).toBe(true);
+    fails(Snapshot, snap({ schema_version: 3 }));
+    fails(Snapshot, snap({ schema_version: 0 }));
+    fails(Snapshot, snap({ schema_version: 1.5 }));
     fails(Snapshot, snap({ schema_version: undefined }));
+  });
+  it("older releases without media still read, with media empty", () => {
+    const r = Snapshot.safeParse(snap({ schema_version: 1 }));
+    expect(r.success && r.data.events[0].media).toEqual([]);
+  });
+  it("event media: ImageKit only, at most one video and two pictures", () => {
+    const pic = { kind: "image", url: "https://ik.imagekit.io/t/a.webp", width: 10, height: 10 };
+    const vid = { kind: "video", url: "https://ik.imagekit.io/t/a.mp4", width: 10, height: 10, duration: 6, poster: "https://ik.imagekit.io/t/a.mp4/ik-thumbnail.jpg" };
+    expect(SnapshotEvent.safeParse(event({ media: [vid, pic, pic] })).success).toBe(true);
+    fails(SnapshotEvent, event({ media: [vid, vid] }));
+    fails(SnapshotEvent, event({ media: [pic, pic, pic] }));
+    fails(SnapshotEvent, event({ media: [pic, pic, pic, vid] }));
+    fails(SnapshotEvent, event({ media: [{ ...pic, url: "https://evil.example/a.webp" }] }));
+    fails(SnapshotEvent, event({ media: [{ ...pic, url: "https://ik.imagekit.io.evil.example/a.webp" }] }));
+    fails(SnapshotEvent, event({ media: [{ ...vid, duration: 45 }] }));
+    fails(SnapshotEvent, event({ media: [{ ...vid, poster: "javascript:alert(1)" }] }));
   });
   it("rejects duplicate slugs and says where", () => {
     const r = Snapshot.safeParse(snap({ events: [event(), event()] }));

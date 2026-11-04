@@ -5,9 +5,13 @@
 // publishing broken pages. This file is copied verbatim into the site repo
 // (src/lib/contract.ts): change both together and bump SCHEMA_VERSION when
 // the shape changes in a way the site must know about.
+//
+// Version 2 (2026-11-04) adds event `media` (ImageKit pictures and a short loop). Older
+// releases stay readable: the site accepts versions 1 to SCHEMA_VERSION, and new fields
+// have defaults, so a rollback to an old release still builds.
 import { z } from "zod";
 
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 2 as const;
 
 function isRealDate(s: string) {
   const d = new Date(`${s}T00:00:00Z`);
@@ -100,6 +104,29 @@ export type YearInfo = z.infer<typeof YearInfo>;
 
 // ---------------------------------------------------------------------------
 
+/** Uploaded media is hosted on ImageKit; the site's Content-Security-Policy allows no other host. */
+const imagekitUrl = httpUrl.refine((u) => {
+  try {
+    const x = new URL(u);
+    return x.protocol === "https:" && x.hostname === "ik.imagekit.io";
+  } catch {
+    return false;
+  }
+}, "Must be an ImageKit link (https://ik.imagekit.io/...)");
+
+/** A picture or a short silent loop video (schema 2). Order matters: picture 1 = backdrop and poster, picture 2 = thumbnail. */
+export const MediaItem = z.object({
+  kind: z.enum(["image", "video"]),
+  url: imagekitUrl,
+  width: z.number().int().positive().max(20000).nullable(),
+  height: z.number().int().positive().max(20000).nullable(),
+  /** Seconds, for videos. */
+  duration: z.number().positive().max(30).nullable().default(null),
+  /** A still for a video while it loads. */
+  poster: imagekitUrl.nullable().default(null),
+});
+export type MediaItem = z.infer<typeof MediaItem>;
+
 export const HubItem = z.object({
   kind: z.enum(["announcement", "link", "file", "schedule"]),
   title: shortText(120),
@@ -137,6 +164,13 @@ export const SnapshotEvent = z.object({
   /** The event's page on VIT EventHub, the official registration. */
   eventhub: eventhubUrl.nullable().default(null),
   faq: z.array(FaqItem).max(50).default([]),
+  /** Schema 2: at most one loop video and two pictures. */
+  media: z
+    .array(MediaItem)
+    .max(3)
+    .refine((list) => list.filter((m) => m.kind === "video").length <= 1, "At most one video")
+    .refine((list) => list.filter((m) => m.kind === "image").length <= 2, "At most two pictures")
+    .default([]),
 });
 export type SnapshotEvent = z.infer<typeof SnapshotEvent>;
 
@@ -166,7 +200,7 @@ export type SnapshotMember = z.infer<typeof SnapshotMember>;
 
 export const Snapshot = z
   .object({
-    schema_version: z.literal(SCHEMA_VERSION),
+    schema_version: z.number().int().min(1).max(SCHEMA_VERSION),
     generated_at: z.string().datetime(),
     events: z.array(SnapshotEvent),
     members: z.array(SnapshotMember),
