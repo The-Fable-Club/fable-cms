@@ -8,7 +8,7 @@ Open work is tracked as GitHub issues: [CMS](https://github.com/The-Fable-Club/f
 **Yes for everything the club needs to run: publishing, events, people, sign-ups, access control.** What remains is small and mostly optional:
 
 ### Do next (short)
-0. Migrations 0001-0014 are applied. New migrations go to the **staging** project first (`npm run db:staging -- --file ...`), then production after `npm run backup`. There is now a staging Supabase project for tests and security work (`npm run dev:staging`, `test:live:staging`): see [SECURITY-TESTING.md](SECURITY-TESTING.md) section 5.
+0. Migrations 0001-0015 are applied. New migrations go to the **staging** project first (`npm run db:staging -- --file ...`), then production after `npm run backup`. There is now a staging Supabase project for tests and security work (`npm run dev:staging`, `test:live:staging`): see [SECURITY-TESTING.md](SECURITY-TESTING.md) section 5.
 1. **Apply migration 0006** (`supabase/migrations/0006_roles.sql`) in the Supabase SQL editor. It creates the four access levels and draft events. Then push the CMS (the app already understands both the old and the new database).
 2. **Give the assistant `DATABASE_URL`** (optional): paste the direct connection string into `fable-cms/.env.local`. It lets migrations run from the terminal and enables `tests/live/roles.live.test.ts`, which proves every level against every table.
 3. First real content: replace the placeholder events and people in the CMS, then delete the `placeholder-*` rows (`npx tsx scripts/seed-placeholders.mts --remove`) and press Publish.
@@ -18,7 +18,7 @@ Open work is tracked as GitHub issues: [CMS](https://github.com/The-Fable-Club/f
 | Item | Notes |
 |---|---|
 | College-format fields | The club wants event and member details adjusted to the college's formats; needs the list of fields first. |
-| Media (photos and clips) | Moving to ImageKit, with the media table as the record: [#1](https://github.com/The-Fable-Club/fable-cms/issues/1). **Foundation done 2026-11-04:** migration 0014 (media columns) applied, signing route in review ([#21](https://github.com/The-Fable-Club/fable-cms/pull/21)). Left: the upload field in the forms, snapshot/contract change in both repos, the site loader + Events stage, and the clean-up sweep. |
+| Media (photos and clips) | **Built 2026-11-04** on ImageKit ([#1](https://github.com/The-Fable-Club/fable-cms/issues/1)): upload field (pictures + 20 s silent loops), schema-2 releases, site loader + Events stage + event page, Media clean-up screen; migrations 0014-0015. Waiting on the club for real photos and clips. Full recordings → YouTube links (not built yet). |
 | Atomic publish | **Done (2026-11-03):** migration 0009 applied; `publish_release()` lets one publisher through at a time under an advisory lock. [#3](https://github.com/The-Fable-Club/fable-cms/issues/3) |
 | Participant hub privacy | Decided to stay public (no student accounts), so participants can download materials. Do not post anything private in a hub. |
 | Club text and aims in the CMS | They live in `content/club.json` and `aims.json` in the site repo (edit and push). The tables exist; a screen is a small job. |

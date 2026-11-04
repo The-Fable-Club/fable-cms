@@ -22,6 +22,9 @@ The admin app for The Fable Club (a student club at VIT Chennai): editors sign i
 | `src/app/(admin)/*` | The screens: dashboard, events, members, applications, registrations, questions, attendance (layout only), releases, admins (People) |
 | `src/app/api/health` | Public liveness check |
 | `src/app/api/hooks/new-application` | Called by the database (migration 0010) to email the club; checks `APPLICATION_HOOK_SECRET` |
+| `src/app/api/imagekit/auth` | 2-minute ImageKit upload signature + fixed folder, creators and up |
+| `src/lib/media.ts`, `components/media-field.tsx` | Upload rules (types, sizes, 20 s loops, 1 loop + 2 pictures) and the upload field |
+| `src/lib/media-sweep.ts`, `media-sweep-server.ts`, `imagekit-server.ts`, `app/(admin)/media` | The Media clean-up: what may be deleted (pure, tested) and the ImageKit list/delete calls |
 | `src/lib/contract.ts`, `event-logic.ts` | The data contract and date/status rules: **byte-identical copies** in fable-site |
 | `src/lib/snapshot.ts`, `publish.ts`, `publish-server.ts` | Rows → validated snapshot → release → deploy hook; rollback; the atomic `publish_release` RPC with a plain-insert fallback until 0009 is applied |
 | `src/lib/roles.ts`, `admins.ts`, `auth.ts` | Access levels (mirror of the database rules), People rules, session checks |
@@ -61,3 +64,4 @@ npm run dev:staging        # CMS on :3201 against staging
 - **Give someone access:** CMS → People (owners). In SQL: `insert into admins (github_username, role, added_by) values ('lowercase-login', 'creator', 'you');`
 - **Publish from a terminal:** `npx tsx scripts/publish-now.mts "note"`.
 - **Locked out, lost a key, deleted data:** `docs/RECOVERY.md`.
+- **Pictures and loops:** upload in the event/member form (ImageKit, never Supabase storage); they reach the site on Publish. Change the release shape → bump `SCHEMA_VERSION` in `contract.ts` in **both** repos, keep the site reading the older versions, merge the site first. RECOVERY 3.9.

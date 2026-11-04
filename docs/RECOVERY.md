@@ -112,7 +112,15 @@ select vault.update_secret((select id from vault.secrets where name = 'applicati
 Set the same value as `APPLICATION_HOOK_SECRET` in the CMS Vercel env (mark it Sensitive) and redeploy. Test as in section 6. If they don't match, alerts stop (applications are still saved): `select status_code, content from net._http_response order by created desc limit 5;` shows `401`.
 
 ### 3.8 ImageKit
-ImageKit dashboard → **Developer options**: replace the private key, update `IMAGEKIT_PRIVATE_KEY` in the CMS Vercel env and `.env.local`, redeploy. The public key and URL endpoint are not secret.
+ImageKit dashboard → **Developer options**: replace the private key, update `IMAGEKIT_PRIVATE_KEY` in the CMS Vercel env and `.env.local` (and `.env.staging.local` if staging tests use it), redeploy. The public key and URL endpoint are not secret. Uploads already made keep working: the site only uses the public delivery URLs.
+
+### 3.9 ImageKit: pictures and loops (how it fits, and what can go wrong)
+- **Where things are.** Files: ImageKit, under `/fable/events/<slug>/`, `/fable/members/<slug>/`, `/fable/about/` (staging tests use `/fable-test/`). Records: the `media` table (one row per upload: ImageKit `file_id`, `path`, `url`, kind, size, clip length). Links: `events.media_ids` (1 loop + 2 pictures) and `members.photo_id` (migration 0015). Releases copy the full URLs, so the site needs nothing from ImageKit but the files themselves.
+- **An upload fails in the CMS.** The message under the field says why: wrong type, too large, clip over 20 s, or "Uploads are not available right now" = the signing route has no keys (Vercel env, 3.8) or the person is below *creator*.
+- **A picture shows on the CMS but not on the site.** It is only on the site after **Publish**. If it still doesn't show: the site's Content-Security-Policy allows pictures and video only from `https://ik.imagekit.io` (fable-site `next.config.ts`); a different host is refused by the data contract on purpose.
+- **A file was deleted by mistake.** ImageKit has no recycle bin on the free plan. Upload it again in the event or member form and publish. Older releases that pointed at the old file will show the event's placeholder or art instead of failing.
+- **The ImageKit account is lost or suspended.** Pages keep building; pictures and loops stop loading (events fall back to the generated placeholders only where the release has no media, so republishing after removing the media gives clean pages). New account: new keys (3.8), set `IMAGEKIT_URL_ENDPOINT`, re-upload, publish. Old `media` rows can then be cleaned up on the **Media** screen.
+- **Storage filling up.** CMS → **Media** (admins): lists files nothing uses and deletes them on request. It never deletes a file an event or member links to, one used by the last 5 releases (rollback stays safe), one younger than 24 h, or anything outside the media folder. The free plan's storage and bandwidth limits are on the ImageKit dashboard (**Usage**); pictures are WebP at most 1600 px and loops at most 20 MB, so usage grows slowly.
 
 ---
 
@@ -153,6 +161,7 @@ It only **adds back rows that are missing** (matched on the primary key), never 
 | No email for new applications | `select status_code, content, error_msg from net._http_response order by created desc limit 5;` `401` = secret mismatch (3.7); `502` = Resend refused (check the key and domain, 3.6); nothing at all = the vault secret is missing or the trigger is off (`select tgname from pg_trigger where tgname = 't_notify_new_application';`). |
 | "Wait a minute before publishing again" | At most one publish per minute (wait 60 s). A database lock (migration 0009) also stops two people publishing at once. |
 | A migration went wrong | Take a backup first, always (4.1). Migrations are additive where possible; a fix is a **new** numbered migration, never an edit to an applied one. |
+| Pictures or loops missing on the site | Section 3.9. |
 | Someone leaves the club | Remove them in the CMS People screen, the GitHub org, Vercel and Supabase. Replace any secret they had in a `.env.local` (section 3). |
 
 ---
