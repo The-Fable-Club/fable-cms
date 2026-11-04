@@ -29,10 +29,14 @@ describe("permissions", () => {
     const table: Record<Role, Action[]> = {
       member: ["read_signups", "read_questions"],
       creator: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions"],
-      admin: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions", "edit_live_events", "manage_members", "triage_signups", "moderate_questions", "publish", "view_releases"],
+      admin: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions", "edit_live_events", "manage_members", "triage_signups", "moderate_questions", "publish", "view_releases", "clean_media"],
       owner: actions,
     };
     for (const r of ROLES) expect(actions.filter((a) => can(r, a)).sort(), r).toEqual([...table[r]].sort());
+  });
+  it("only admins and owners clean up media", () => {
+    expect(can("creator", "clean_media")).toBe(false);
+    expect(can("admin", "clean_media")).toBe(true);
   });
   it("only owners manage people and roll back; members and creators cannot publish", () => {
     expect(can("admin", "manage_people")).toBe(false);
@@ -71,7 +75,7 @@ describe("navigation", () => {
   it("shows each role only what it can use", () => {
     expect(links("member")).toEqual(["Dashboard", "Applications", "Registrations", "Questions", "Attendance"]);
     expect(links("creator")).toEqual(["Dashboard", "Events", "Applications", "Registrations", "Questions", "Attendance"]);
-    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases"]);
-    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases", "People"]);
+    expect(links("admin")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases", "Media"]);
+    expect(links("owner")).toEqual(["Dashboard", "Events", "Members", "Applications", "Registrations", "Questions", "Attendance", "Releases", "Media", "People"]);
   });
 });
