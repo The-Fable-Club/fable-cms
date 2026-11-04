@@ -56,7 +56,7 @@ The viewer turns a mesh into a point cloud, so it needs a **GLB / glTF or OBJ**,
 - Or have the assistant model one in code from the club's sprout mark (no licence question at all, and it matches the brand).
 
 ### Member backgrounds (People section)
-- **Generate them in code, one motif per group**, in the club's palette so they match the site and need no licensing: web dev -> code brackets and grid, agentic AI -> node graph, operations -> interlocking rings, finance -> stacked bars, creative -> overlapping shapes, technical -> circuit lines, leadership -> sprout and concentric rings. The assistant can build these as SVG components, animated with the site's easing. This is the recommendation.
+- **Generate them in code, one motif per group**, in the club's palette so they match the site and need no licensing: web dev -> code brackets and grid, agentic AI -> node graph, operations -> interlocking rings, finance -> stacked bars, creative -> overlapping shapes, projects (formerly technical) -> circuit lines, leadership -> sprout and concentric rings. The assistant can build these as SVG components, animated with the site's easing. This is the recommendation.
 - If you want illustrations instead: **unDraw / Open Peeps / Humaaans** (free, attribution-friendly), **heropatterns.com** and **haikei.app** (free SVG patterns and shapes), or a custom set from a designer later.
 
 ### Process
