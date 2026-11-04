@@ -1,11 +1,11 @@
 import { Snapshot } from "@/lib/contract";
-import { buildSnapshot, type EventRow, type MemberRow, type Problem, type QuestionRow } from "@/lib/snapshot";
+import { buildSnapshot, type EventRow, type MediaRow, type MemberRow, type Problem, type QuestionRow } from "@/lib/snapshot";
 
 /** Everything publish() touches, injected so the logic can be tested without a network. */
 export type PublishDeps = {
   supabaseUrl: string;
   now: () => Date;
-  loadRows: () => Promise<{ events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[] }>;
+  loadRows: () => Promise<{ events: EventRow[]; members: MemberRow[]; questions?: QuestionRow[]; media?: MediaRow[] }>;
   /** A quick early check, so a refused publish does not build the snapshot first. */
   lastPublishedAt: () => Promise<Date | null>;
   /**
