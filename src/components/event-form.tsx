@@ -8,7 +8,7 @@ import type { EventRow } from "@/lib/snapshot";
 import type { FormState } from "@/app/(admin)/form-state";
 import { ArtPicker, Field, ModeGroup, inputCls } from "@/components/form-bits";
 import { HubEditor } from "@/components/hub-editor";
-import { ImageField } from "@/components/image-field";
+import { MediaField } from "@/components/media-field";
 
 type Props = {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
@@ -20,7 +20,7 @@ type Props = {
 const blank: Omit<EventRow, "id"> = {
   slug: "", title: "", kind: "Workshop", phase: 1, status_override: null, date_mode: "exact", start_date: null, end_date: null, date_month: null,
   date_text: null, time_mode: "text", time_text: "", venue_mode: "text", venue: "", seats_mode: "open", seats: null, apply_mode: "none",
-  apply_url: null, summary: "", description: "", highlights: [], art: "sprouts", photo_path: null, hub: [], archived: false, draft: true,
+  apply_url: null, summary: "", description: "", highlights: [], art: "sprouts", photo_path: null, media_ids: [], hub: [], archived: false, draft: true,
 };
 
 export function EventForm({ action, event, author, role }: Props) {
@@ -217,7 +217,15 @@ export function EventForm({ action, event, author, role }: Props) {
         <textarea name="highlights" defaultValue={e.highlights.join("\n")} rows={4} className={`${inputCls} h-auto py-2`} />
       </Field>
 
-      <ImageField name="photo_path" folder="events" defaultPath={e.photo_path} label="Photo (optional)" />
+      <input type="hidden" name="photo_path" value={e.photo_path ?? ""} />
+      <MediaField
+        name="media_ids"
+        kind="events"
+        label="Pictures and loop (optional)"
+        defaultIds={e.media_ids ?? []}
+        max={{ image: 2, video: 1 }}
+        hint="Up to 2 pictures and 1 short silent loop (MP4/WebM, at most 20 s). Picture 1 is the backdrop, picture 2 the thumbnail. Full recordings go on YouTube."
+      />
       <ArtPicker defaultValue={e.art} />
       <HubEditor initial={Array.isArray(e.hub) ? (e.hub as never[]) : []} author={author} error={err.hub} />
 

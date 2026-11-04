@@ -3,6 +3,7 @@
 // than when publishing. Pure: no database, easy to test.
 import { SnapshotEvent, SnapshotMember } from "@/lib/contract";
 import { eventCandidate, memberCandidate, type EventRow, type MemberRow } from "@/lib/snapshot";
+import { parseIds } from "@/lib/media";
 
 export type FormErrors = Record<string, string>;
 export type Parsed<R> = { ok: true; row: R } | { ok: false; errors: FormErrors };
@@ -82,6 +83,7 @@ export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co
     highlights: String(f.get("highlights") ?? "").split("\n").map((l) => l.trim()).filter(Boolean),
     art: str(f, "art") || "sprouts",
     photo_path: orNull(str(f, "photo_path")),
+    media_ids: parseIds(str(f, "media_ids"), 3),
     hub,
     archived: f.get("archived") === "on",
     draft: f.get("draft") === "on",
@@ -113,6 +115,7 @@ export function parseMemberForm(f: FormData, supabaseUrl = "https://x.supabase.c
     github: orNull(str(f, "github")),
     art: str(f, "art") || "sprouts",
     photo_path: orNull(str(f, "photo_path")),
+    photo_id: parseIds(str(f, "photo_id"), 1)[0] ?? null,
     archived: f.get("archived") === "on",
   };
   const check = SnapshotMember.safeParse(memberCandidate({ ...row, id: 0 }, supabaseUrl));

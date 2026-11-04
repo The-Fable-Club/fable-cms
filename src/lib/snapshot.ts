@@ -28,6 +28,8 @@ export type EventRow = {
   highlights: string[];
   art: string;
   photo_path: string | null;
+  /** media.id list: at most 1 video + 2 pictures, display order (migration 0015). */
+  media_ids?: number[];
   hub: unknown;
   archived: boolean;
   /** Saved but not ready: never published. Creators can only save drafts; admins take them live. */
@@ -73,6 +75,8 @@ export type MemberRow = {
   github: string | null;
   art: string;
   photo_path: string | null;
+  /** media.id of the photo (migration 0015). */
+  photo_id?: number | null;
   archived: boolean;
 };
 
