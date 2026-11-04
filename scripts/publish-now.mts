@@ -2,7 +2,7 @@
 // For maintenance and migrations; day to day, use the Publish button in the CMS.
 //   npx tsx scripts/publish-now.mts "note about this release"
 import { publish, type PublishDeps } from "../src/lib/publish";
-import type { EventRow, MemberRow, QuestionRow } from "../src/lib/snapshot";
+import type { EventRow, MediaRow, MemberRow, QuestionRow } from "../src/lib/snapshot";
 import { loadEnv } from "./env-file.mjs";
 
 loadEnv(); // .env.local, or ENV_FILE (see scripts/env-file.mjs)
@@ -27,13 +27,14 @@ const deps: PublishDeps = {
     members: (await rest("members?select=*")) as MemberRow[],
     // missing before migration 0007: publish without an FAQ
     questions: ((await rest("event_questions?select=id,created_at,event_slug,question,answer,show_on_site,hidden&show_on_site=eq.true").catch(() => [])) ?? []) as QuestionRow[],
+    media: (await rest("media?select=id,kind,provider,url,width,height,duration")) as MediaRow[],
   }),
   lastPublishedAt: async () => {
     const rows = (await rest("releases?select=published_at&order=id.desc&limit=1")) as { published_at: string }[];
     return rows[0] ? new Date(rows[0].published_at) : null;
   },
   insertRelease: async ({ snapshot, note, publishedBy }) => {
-    const rows = (await rest("releases?select=id", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ snapshot, note, published_by: publishedBy, schema_version: 1 }) })) as { id: number }[];
+    const rows = (await rest("releases?select=id", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ snapshot, note, published_by: publishedBy, schema_version: snapshot.schema_version }) })) as { id: number }[];
     return { id: rows[0].id };
   },
   hookUrl: process.env.VERCEL_DEPLOY_HOOK_URL?.trim() || null,
