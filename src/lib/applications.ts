@@ -33,11 +33,25 @@ export type Application = {
   build: string | null;
   why: string;
   task: string | null;
+  /** The team-specific questions and what they said (migration 0016; fable-site content/teams.json). */
+  answers?: TeamAnswer[] | null;
   level?: string | null;
   tracks?: string[] | null;
   status: string;
   notes: string | null;
 };
+
+export type TeamAnswer = { q: string; a: string };
+
+/** The team answers, ignoring anything that isn't a {q, a} pair (the column is written by the public form). */
+export function teamAnswers(a: Pick<Application, "answers">): TeamAnswer[] {
+  return Array.isArray(a.answers) ? a.answers.filter((x) => x && typeof x.q === "string" && typeof x.a === "string") : [];
+}
+
+/** The answers as one block of text, for the CSV export. */
+export function answersText(a: Pick<Application, "answers">): string {
+  return teamAnswers(a).map((x) => `${x.q}\n${x.a}`).join("\n\n");
+}
 
 export type AppFilters = { status: AppStatus | "all"; team: string | "all"; intake: string | "all"; q: string };
 
@@ -135,6 +149,7 @@ export function newApplicationMail(a: Application, cmsUrl = "https://cms.thefabl
     "",
     line("What they want to build", a.build),
     "",
+    ...teamAnswers(a).flatMap((x) => [`${x.q}\n${x.a}`, ""]),
     line("Why they want to join", a.why),
     "",
     line("Short task", a.task),

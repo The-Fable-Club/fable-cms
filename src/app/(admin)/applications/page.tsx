@@ -12,6 +12,7 @@ import {
   matches,
   parseFilters,
   replyMailto,
+  teamAnswers,
   whatsappLink,
   type Application,
   type ReplyKind,
@@ -150,6 +151,13 @@ export default async function Applications({
               <div className="mt-3 grid gap-3 text-sm md:grid-cols-[12rem_1fr]">
                 <p className={label}>Team</p>
                 <p>{a.team ?? "—"}{a.intake && a.intake !== CURRENT_INTAKE ? <span className="text-ink/60"> · intake {a.intake}</span> : null}</p>
+                {/* team questions (migration 0016): the question is long, so it gets the full width */}
+                {teamAnswers(a).map((x, i) => (
+                  <div key={i} className="border-l-2 border-ink/15 pl-3 md:col-span-2">
+                    <p className="text-ink/60">{x.q}</p>
+                    <p className="mt-1 whitespace-pre-wrap">{x.a}</p>
+                  </div>
+                ))}
                 {(
                   [
                     ["Wants to build or learn", a.build],
