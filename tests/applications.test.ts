@@ -8,6 +8,8 @@ import {
   newApplicationMail,
   parseFilters,
   replyMailto,
+  answersText,
+  teamAnswers,
   whatsappLink,
   type Application,
 } from "@/lib/applications";
@@ -103,11 +105,30 @@ describe("newApplicationMail", () => {
     expect(m.text).not.toMatch(/\n{3,}/);
   });
 
+  it("includes the team-specific questions with their answers (migration 0016)", () => {
+    const m = newApplicationMail(a({ build: null, answers: [{ q: "Pitch a project.", a: "A notes agent." }] }));
+    expect(m.text).toContain("Pitch a project.\nA notes agent.");
+    expect(m.text).not.toMatch(/\n{3,}/);
+  });
+
   it("leaves out answers that are empty", () => {
     const m = newApplicationMail(a({ team: null, phone: null, build: null, task: null }));
     expect(m.subject).toBe("New application: Ada Lovelace");
     expect(m.text).not.toContain("Phone:");
     expect(m.text).not.toContain("Short task");
     expect(m.text).not.toMatch(/\n{3,}/);
+  });
+});
+
+describe("team answers", () => {
+  it("keep only well-formed {q, a} pairs, since the public form writes the column", () => {
+    const bad = [{ q: "Q1", a: "A1" }, { q: 2, a: "x" }, null, "text", { q: "Q2", a: "A2" }] as unknown as { q: string; a: string }[];
+    expect(teamAnswers({ answers: bad })).toEqual([{ q: "Q1", a: "A1" }, { q: "Q2", a: "A2" }]);
+    expect(teamAnswers({ answers: null })).toEqual([]);
+    expect(teamAnswers({ answers: { q: "x" } as unknown as [] })).toEqual([]);
+  });
+  it("read as plain text in the CSV", () => {
+    expect(answersText({ answers: [{ q: "Q1", a: "A1" }, { q: "Q2", a: "A2" }] })).toBe("Q1\nA1\n\nQ2\nA2");
+    expect(answersText({})).toBe("");
   });
 });

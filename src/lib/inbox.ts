@@ -6,7 +6,7 @@ export const INBOXES = {
     title: "Applications",
     intro: "People who applied to join the club from the Join page.",
     statuses: APP_STATUSES, // the review steps: src/lib/applications.ts
-    columns: ["created_at", "intake", "name", "reg_no", "email", "phone", "department", "year", "team", "build", "why", "task", "status", "notes"],
+    columns: ["created_at", "intake", "name", "reg_no", "email", "phone", "department", "year", "team", "build", "answers", "why", "task", "status", "notes"],
   },
   registrations: {
     title: "Registrations",
