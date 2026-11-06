@@ -171,6 +171,8 @@ export const SnapshotEvent = z.object({
     .refine((list) => list.filter((m) => m.kind === "video").length <= 1, "At most one video")
     .refine((list) => list.filter((m) => m.kind === "image").length <= 2, "At most two pictures")
     .default([]),
+  /** Official VIT OD slots approved for this event. */
+  od_slots: z.array(z.string()).default([]),
 });
 export type SnapshotEvent = z.infer<typeof SnapshotEvent>;
 

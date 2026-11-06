@@ -88,6 +88,7 @@ export function parseEventForm(f: FormData, supabaseUrl = "https://x.supabase.co
     archived: f.get("archived") === "on",
     draft: f.get("draft") === "on",
     eventhub_url: orNull(str(f, "eventhub_url")),
+    od_slots: f.getAll("od_slots").map(String).filter(Boolean),
   };
 
   const check = SnapshotEvent.safeParse(eventCandidate({ ...row, id: 0 }, supabaseUrl));
