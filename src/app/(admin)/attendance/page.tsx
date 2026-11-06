@@ -5,6 +5,7 @@ import { EventSelector } from "@/components/attendance/event-selector";
 import { RosterUploadForm } from "@/components/attendance/roster-upload-form";
 import { OnSpotForm } from "@/components/attendance/onspot-form";
 import { AttendanceManager, type CheckpointWithMarks } from "@/components/attendance/attendance-manager";
+import { OdOverrideButton } from "@/components/attendance/od-override-button";
 
 export const metadata = { title: "Attendance & OD Management" };
 
@@ -15,6 +16,19 @@ type PageProps = {
   searchParams: Promise<{ event?: string }>;
 };
 
+function formatShortTime(iso: string) {
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
 export default async function AttendancePage({ searchParams }: PageProps) {
   await requireCan("read_signups");
   const params = await searchParams;
@@ -23,10 +37,15 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   // 1. Fetch available events
   const { data: eventsData, error: eventsErr } = await supabase
     .from("events")
-    .select("id, title, start_date")
+    .select("id, title, start_date, od_slots")
     .order("start_date", { ascending: false, nullsFirst: false });
 
-  const events = (eventsData ?? []) as { id: number; title: string; start_date?: string | null }[];
+  const events = (eventsData ?? []) as {
+    id: number;
+    title: string;
+    start_date?: string | null;
+    od_slots?: string[] | null;
+  }[];
 
   if (events.length === 0) {
     return (
@@ -49,6 +68,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   // Determine selected event
   const selectedEventId = params.event ? Number(params.event) : events[0].id;
   const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
+  const eventOdSlots = Array.isArray(selectedEvent.od_slots) ? selectedEvent.od_slots : [];
 
   // 2. Fetch roster counts and sample for selected event
   const [
@@ -57,14 +77,14 @@ export default async function AttendancePage({ searchParams }: PageProps) {
     { count: onSpotCount },
     { count: flaggedCount },
     { data: checkpointsData },
-    { data: rosterSample },
+    { data: rosterSampleData },
   ] = await Promise.all([
     supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id),
     supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("source", "eventhub"),
     supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("source", "onspot"),
     supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("flagged", true),
     supabase.from("attendance_checkpoints").select("id, title, opens_at, closes_at, needed_for_od").eq("event_id", selectedEvent.id).order("opens_at", { ascending: true }),
-    supabase.from("attendance_roster").select("id, reg_no, name, department, year, source, flagged, device_token").eq("event_id", selectedEvent.id).order("id", { ascending: false }).limit(20),
+    supabase.from("attendance_roster").select("id, reg_no, name, department, year, college, source, flagged, od_slots, od_override, od_override_reason").eq("event_id", selectedEvent.id).order("id", { ascending: false }).limit(50),
   ]);
 
   const rawCheckpoints = (checkpointsData ?? []) as {
@@ -77,30 +97,36 @@ export default async function AttendancePage({ searchParams }: PageProps) {
 
   const chkIds = rawCheckpoints.map((c) => c.id);
 
-  // 3. Fetch marks counts for checkpoints and volunteer door check count
+  // 3. Fetch marks counts for checkpoints and per-student marks mapping
   let marksMap: Record<number, number> = {};
-  let volunteerVerifiedCount = 0;
+  const studentMarksMap: Record<number, Record<number, string>> = {};
+  let staffRecordedCount = 0;
 
   if (chkIds.length > 0) {
     const { data: marks } = await supabase
       .from("attendance_marks")
-      .select("checkpoint_id, method, verified_by, roster_id")
+      .select("roster_id, checkpoint_id, marked_at, verified_by, method")
       .in("checkpoint_id", chkIds);
 
-    const verifiedRosterIds = new Set<number>();
+    const recordedRosterIds = new Set<number>();
     (marks ?? []).forEach((m) => {
       marksMap[m.checkpoint_id] = (marksMap[m.checkpoint_id] || 0) + 1;
-      if (m.method === "volunteer_scan" || m.verified_by) {
-        verifiedRosterIds.add(m.roster_id);
+      recordedRosterIds.add(m.roster_id);
+
+      if (!studentMarksMap[m.roster_id]) {
+        studentMarksMap[m.roster_id] = {};
       }
+      studentMarksMap[m.roster_id][m.checkpoint_id] = m.marked_at;
     });
-    volunteerVerifiedCount = verifiedRosterIds.size;
+    staffRecordedCount = recordedRosterIds.size;
   }
 
   const checkpoints: CheckpointWithMarks[] = rawCheckpoints.map((c) => ({
     ...c,
     marks_count: marksMap[c.id] || 0,
   }));
+
+  const rosterSample = rosterSampleData ?? [];
 
   return (
     <div className="space-y-6">
@@ -150,8 +176,8 @@ export default async function AttendancePage({ searchParams }: PageProps) {
               <dd className="mt-1 text-2xl font-semibold">{onSpotCount ?? 0}</dd>
             </div>
             <div className="bg-paper p-3">
-              <dt className={label}>Door ID</dt>
-              <dd className="mt-1 text-2xl font-semibold text-clay-deep">{volunteerVerifiedCount}</dd>
+              <dt className={label}>Marked</dt>
+              <dd className="mt-1 text-2xl font-semibold text-clay-deep">{staffRecordedCount}</dd>
             </div>
           </dl>
           {(flaggedCount ?? 0) > 0 && (
@@ -172,67 +198,135 @@ export default async function AttendancePage({ searchParams }: PageProps) {
         </section>
       </div>
 
-      {/* Sections 3 & 4: Checkpoints + Door Scanner + Export */}
-      <AttendanceManager eventId={selectedEvent.id} checkpoints={checkpoints} />
+      {/* Sections 3 & 4: Checkpoints + Staff Attendance + Dual Export */}
+      <AttendanceManager
+        eventId={selectedEvent.id}
+        checkpoints={checkpoints}
+        eventOdSlots={eventOdSlots}
+      />
 
-      {/* Section 5: Recent Roster Entries */}
+      {/* Section 5: Roster Preview with Per-Checkpoint Marks & OD Status */}
       <section className={card}>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Roster Preview (Recent {rosterSample?.length ?? 0})</h2>
-          <span className="font-mono text-xs uppercase text-ink/50">Top recent entries</span>
+          <h2 className="text-lg font-semibold">Roster Preview (Recent {rosterSample.length})</h2>
+          <span className="font-mono text-xs uppercase text-ink/50">Top entries with checkpoint marks</span>
         </div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b-2 border-ink font-mono text-xs uppercase tracking-widest text-ink/60">
               <tr>
-                <th className="py-2">Reg No</th>
+                <th className="py-2.5">Reg No</th>
                 <th>Name</th>
+                <th>College</th>
                 <th>Dept / Year</th>
-                <th>Source</th>
-                <th>Device Bound</th>
-                <th>Status</th>
+                {rawCheckpoints.map((c) => (
+                  <th key={c.id} className="text-center whitespace-nowrap px-2">
+                    {c.title}
+                    {c.needed_for_od && <span className="text-clay-deep ml-1">*</span>}
+                  </th>
+                ))}
+                <th className="text-center">OD Status</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/20">
-              {(rosterSample ?? []).length === 0 ? (
+              {rosterSample.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-ink/40">
+                  <td colSpan={6 + rawCheckpoints.length} className="py-6 text-center text-ink/40">
                     No attendees registered yet. Import a spreadsheet or add on-spot above.
                   </td>
                 </tr>
               ) : (
-                (rosterSample ?? []).map((r) => (
-                  <tr key={r.id} className="hover:bg-paper-raised">
-                    <td className="py-2 font-mono font-medium">{r.reg_no}</td>
-                    <td>{r.name}</td>
-                    <td className="text-xs text-ink/70">
-                      {[r.department, r.year].filter(Boolean).join(" · ") || "–"}
-                    </td>
-                    <td>
-                      <span className="font-mono text-[0.7rem] uppercase px-1.5 py-0.5 border border-ink/30">
-                        {r.source}
-                      </span>
-                    </td>
-                    <td className="font-mono text-xs">
-                      {r.device_token ? (
-                        <span className="text-ink font-medium" title={r.device_token}>
-                          Bound
-                        </span>
-                      ) : (
-                        <span className="text-ink/40">Unbound</span>
-                      )}
-                    </td>
-                    <td>
-                      {r.flagged ? (
-                        <span className="border border-clay-deep bg-clay-deep/10 px-1.5 py-0.5 font-mono text-[0.65rem] uppercase text-clay-deep">
-                          Missing
-                        </span>
-                      ) : (
-                        <span className="font-mono text-[0.65rem] uppercase text-ink/60">Active</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                rosterSample.map((r) => {
+                  const studentMarks = studentMarksMap[r.id] || {};
+                  const missedRequired = rawCheckpoints.filter(
+                    (c) => c.needed_for_od && !studentMarks[c.id]
+                  );
+                  const satisfiedAllRequired = rawCheckpoints.some((c) => c.needed_for_od)
+                    ? missedRequired.length === 0
+                    : Object.keys(studentMarks).length > 0;
+                  const isOverridden = Boolean(r.od_override);
+                  const isEligible = isOverridden || satisfiedAllRequired;
+
+                  return (
+                    <tr key={r.id} className="hover:bg-paper-raised">
+                      <td className="py-2.5 font-mono font-medium">{r.reg_no}</td>
+                      <td>
+                        <span className="font-medium">{r.name}</span>
+                        {r.flagged && (
+                          <span className="ml-1.5 border border-clay-deep bg-clay-deep/10 px-1 py-0.2 font-mono text-[0.65rem] uppercase text-clay-deep">
+                            Missing
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-xs">
+                        {r.college && r.college.toLowerCase() !== "vit chennai" ? (
+                          <span className="font-semibold text-clay-deep">{r.college}</span>
+                        ) : (
+                          <span className="text-ink/60">{r.college || "VIT Chennai"}</span>
+                        )}
+                      </td>
+                      <td className="text-xs text-ink/70">
+                        {[r.department, r.year].filter(Boolean).join(" · ") || "–"}
+                      </td>
+
+                      {/* Dynamic Checkpoint Attendance Columns */}
+                      {rawCheckpoints.map((c) => {
+                        const markTime = studentMarks[c.id];
+                        return (
+                          <td key={c.id} className="text-center font-mono text-xs whitespace-nowrap px-2">
+                            {markTime ? (
+                              <span
+                                className="font-semibold text-ink"
+                                title={`Marked at ${formatShortTime(markTime)}`}
+                              >
+                                ✓ {formatShortTime(markTime)}
+                              </span>
+                            ) : (
+                              <span className="text-ink/30">–</span>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      {/* OD Eligibility Status */}
+                      <td className="text-center whitespace-nowrap">
+                        {isOverridden ? (
+                          <span
+                            title={r.od_override_reason || "Manually included by staff"}
+                            className="border border-clay-deep bg-clay/20 px-2 py-0.5 font-mono text-xs font-semibold uppercase text-clay-deep cursor-help"
+                          >
+                            Overridden
+                          </span>
+                        ) : isEligible ? (
+                          <span className="border border-ink bg-paper-raised px-2 py-0.5 font-mono text-xs font-semibold uppercase text-ink">
+                            Eligible
+                          </span>
+                        ) : (
+                          <span
+                            title={
+                              missedRequired.length > 0
+                                ? `Missed: ${missedRequired.map((c) => c.title).join(", ")}`
+                                : "Ineligible"
+                            }
+                            className="border border-ink/30 bg-paper px-2 py-0.5 font-mono text-xs uppercase text-ink/50 cursor-help"
+                          >
+                            Ineligible
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Override Action */}
+                      <td className="text-right whitespace-nowrap">
+                        <OdOverrideButton
+                          rosterId={r.id}
+                          isOverridden={isOverridden}
+                          studentName={r.name}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

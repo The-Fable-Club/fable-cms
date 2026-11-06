@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseRosterFile } from "../src/lib/roster-parser";
-import {
-  computeRollingCode,
-  verifyRollingCode,
-} from "../src/lib/attendance-crypto";
+import { VIT_REG_NO_REGEX } from "../src/lib/od-constants";
 
-describe("Attendance System End-to-End Workflow Simulation", () => {
+import {
+  groupStudentsIntoOdColumns,
+  generateOdExcelWorkbook,
+  type StudentOdEntry,
+} from "../src/lib/od-excel-generator";
+
+describe("Staff Attendance & University OD Workflow Simulation", () => {
   const sampleOdsPath = join(process.cwd(), "..", "Event_Details.ods");
   const odsBuffer = readFileSync(sampleOdsPath);
 
@@ -30,166 +33,200 @@ describe("Attendance System End-to-End Workflow Simulation", () => {
     expect(josh?.phone).toBe("2345678901");
   });
 
-  it("2. Simulates 20s rolling OTP Presenter Screen & Verification with Drift", () => {
-    const secret = "test-secret-checkpoint-arrival";
-    const t0Ms = 1730000000 * 1000; // Fixed timestamp in ms
+  it("2. Validates On-Spot registration numbers conditionally by College", () => {
+    function validateOnSpot(regNo: string, collegeInput?: string) {
+      const cleanReg = regNo.trim().toUpperCase();
+      const college = (collegeInput || "").trim() || "VIT Chennai";
+      const isVitChennai = college.toLowerCase() === "vit chennai";
 
-    // Presenter screen generates 6-digit code for current 20s epoch step
-    const { code: code0, step: step0, secondsRemaining } = computeRollingCode(secret, t0Ms);
-    expect(code0).toMatch(/^\d{6}$/);
-    expect(secondsRemaining).toBeGreaterThanOrEqual(1);
-    expect(secondsRemaining).toBeLessThanOrEqual(20);
+      if (isVitChennai) {
+        if (!VIT_REG_NO_REGEX.test(cleanReg)) {
+          return { ok: false, error: "VIT format required (2 digits, 3 letters, 4 digits)" };
+        }
+      } else {
+        if (cleanReg.length < 2 || cleanReg.length > 50) {
+          return { ok: false, error: "Invalid registration number length" };
+        }
+      }
+      return { ok: true, regNo: cleanReg, college };
+    }
 
-    // Within same 20s window (e.g. 5 seconds later), same code is generated
-    const { code: code0Plus5 } = computeRollingCode(secret, t0Ms + 5000);
-    expect(code0Plus5).toBe(code0);
+    // VIT Chennai (default or explicit): must follow 2 digits, 3 letters, 4 digits
+    expect(validateOnSpot("24BCE1078").ok).toBe(true);
+    expect(validateOnSpot("24bce1078", "VIT Chennai").ok).toBe(true);
+    expect(validateOnSpot("24BCE1078", "vit chennai").ok).toBe(true);
+    expect(validateOnSpot("24BCE1078", "").ok).toBe(true);
 
-    // After 21 seconds (next step), code rolls forward
-    const { code: code1, step: step1 } = computeRollingCode(secret, t0Ms + 21000);
-    expect(step1).toBe(step0 + 1);
-    expect(code1).not.toBe(code0);
+    // Invalid VIT formats
+    expect(validateOnSpot("12345").ok).toBe(false);
+    expect(validateOnSpot("24BC1078").ok).toBe(false); // Only 2 letters
+    expect(validateOnSpot("24BCE107").ok).toBe(false);  // Only 3 digits at end
 
-    // Code verification accepts current code
-    expect(verifyRollingCode(secret, code0, t0Ms)).toBe(true);
-
-    // 1-step drift acceptance: code from previous 20s step is accepted during the next step
-    expect(verifyRollingCode(secret, code0, t0Ms + 21000)).toBe(true);
-
-    // Stale code from 2 steps ago (45s later) is rejected
-    expect(verifyRollingCode(secret, code0, t0Ms + 45000)).toBe(false);
-
-    // Arbitrary wrong code is rejected
-    expect(verifyRollingCode(secret, "999999", t0Ms)).toBe(false);
+    // Non-VIT Colleges: accepts arbitrary institutional ID formats
+    expect(validateOnSpot("RA2111003010123", "SRM University").ok).toBe(true);
+    expect(validateOnSpot("CS2024-9901", "IIT Madras").ok).toBe(true);
+    expect(validateOnSpot("ANNA-ENG-442", "Anna University").ok).toBe(true);
+    expect(validateOnSpot("X", "SRM").ok).toBe(false); // Too short (<2)
   });
 
-  it("3. Simulates Anti-Proxy 1-Device Binding and Multiple Students", () => {
-    // In-memory model mimicking PostgreSQL table constraints and atomic locks
+  it("3. Simulates Staff recording attendance and OD slot customization", () => {
     type RosterRecord = {
       id: number;
       reg_no: string;
-      device_token: string | null;
+      name: string;
+      college: string;
+      od_slots: string[];
+      od_override: boolean;
+      od_override_reason?: string;
     };
+
     type MarkRecord = {
       roster_id: number;
       checkpoint_id: number;
-      method: "student_code" | "volunteer_scan";
+      verified_by: string;
     };
 
     const roster: RosterRecord[] = [
-      { id: 1, reg_no: "24BLC1208", device_token: null },
-      { id: 2, reg_no: "26BAI1722", device_token: null },
+      {
+        id: 1,
+        reg_no: "24BCE1078",
+        name: "Skandan",
+        college: "VIT Chennai",
+        od_slots: [],
+        od_override: false,
+      },
+      {
+        id: 2,
+        reg_no: "24BAI1599",
+        name: "Sanjani",
+        college: "VIT Chennai",
+        od_slots: [],
+        od_override: false,
+      },
     ];
+
     const marks: MarkRecord[] = [];
 
-    function markAttendance(
-      regNo: string,
-      code: string,
-      deviceToken: string,
+    // Staff records attendance for Skandan at Checkpoint 1 with 3 morning slots
+    function staffRecordAttendance(
+      rosterId: number,
       checkpointId: number,
-      secret: string,
-      timestampMs: number
-    ): { ok: boolean; code?: string; message: string } {
-      const student = roster.find((r) => r.reg_no === regNo);
-      if (!student) return { ok: false, code: "not_in_roster", message: "Not in roster" };
+      selectedSlots: string[],
+      actor: string
+    ) {
+      const student = roster.find((r) => r.id === rosterId);
+      if (!student) return { ok: false, message: "Student not found" };
 
-      if (!verifyRollingCode(secret, code, timestampMs)) {
-        return { ok: false, code: "invalid_code", message: "Invalid or expired code" };
+      // Update OD slots
+      student.od_slots = selectedSlots;
+
+      // Add mark if not present
+      if (!marks.some((m) => m.roster_id === rosterId && m.checkpoint_id === checkpointId)) {
+        marks.push({ roster_id: rosterId, checkpoint_id: checkpointId, verified_by: actor });
       }
 
-      // 1. Anti-Proxy: Check if device is already registered to someone else in this event
-      const deviceUsedByOther = roster.some(
-        (r) => r.device_token === deviceToken && r.id !== student.id
-      );
-      if (deviceUsedByOther) {
-        return { ok: false, code: "device_shared", message: "Device already used by another student" };
-      }
-
-      // 2. Enforce 1-device binding for this student
-      if (student.device_token === null) {
-        student.device_token = deviceToken;
-      } else if (student.device_token !== deviceToken) {
-        return { ok: false, code: "device_mismatch", message: "Registration bound to another device" };
-      }
-
-      // 3. Check if already marked
-      if (marks.some((m) => m.roster_id === student.id && m.checkpoint_id === checkpointId)) {
-        return { ok: false, code: "already_marked", message: "Already checked in" };
-      }
-
-      marks.push({ roster_id: student.id, checkpoint_id: checkpointId, method: "student_code" });
-      return { ok: true, message: "Marked present" };
+      return { ok: true, student };
     }
 
-    const secret = "chk-1-secret";
-    const nowMs = 1730000000 * 1000;
-    const { code } = computeRollingCode(secret, nowMs);
-
-    // Student 1 marks attendance with Device A -> SUCCESS (binds Device A)
-    const res1 = markAttendance("24BLC1208", code, "device-A-uuid", 1, secret, nowMs);
+    const res1 = staffRecordAttendance(1, 101, ["slot_1", "slot_2", "slot_3"], "admin_user");
     expect(res1.ok).toBe(true);
-    expect(roster[0].device_token).toBe("device-A-uuid");
+    expect(roster[0].od_slots).toEqual(["slot_1", "slot_2", "slot_3"]);
+    expect(marks.length).toBe(1);
 
-    // Student 1 tries to mark same checkpoint again -> REJECTED (already marked)
-    const resDuplicate = markAttendance("24BLC1208", code, "device-A-uuid", 1, secret, nowMs);
-    expect(resDuplicate.code).toBe("already_marked");
-
-    // Student 1 tries from a friend's phone Device B -> REJECTED (device mismatch)
-    const resMismatch = markAttendance("24BLC1208", code, "device-B-uuid", 2, secret, nowMs);
-    expect(resMismatch.code).toBe("device_mismatch");
-
-    // Student 2 tries to proxy-mark using Student 1's phone Device A -> REJECTED (device shared)
-    const resShared = markAttendance("26BAI1722", code, "device-A-uuid", 1, secret, nowMs);
-    expect(resShared.code).toBe("device_shared");
-
-    // Student 2's device was NOT bound to Device A because the device_shared check aborted before binding
-    expect(roster[1].device_token).toBeNull();
-
-    // Student 2 marks with their own phone Device C -> SUCCESS
-    const res2 = markAttendance("26BAI1722", code, "device-C-uuid", 1, secret, nowMs);
+    // Staff records attendance for Sanjani at Checkpoint 1 with all 6 slots
+    const allSlots = ["slot_1", "slot_2", "slot_3", "slot_4", "slot_5", "slot_6"];
+    const res2 = staffRecordAttendance(2, 101, allSlots, "admin_user");
     expect(res2.ok).toBe(true);
-    expect(roster[1].device_token).toBe("device-C-uuid");
+    expect(roster[1].od_slots).toEqual(allSlots);
+    expect(marks.length).toBe(2);
   });
 
-  it("4. Simulates Volunteer Door ID Scan and OD Eligibility Rule", () => {
-    // Checkpoints: Arrival (needed for OD), Exit (needed for OD)
+  it("4. Evaluates OD eligibility across checkpoints and supports manual overrides", () => {
     const checkpoints = [
-      { id: 1, title: "Arrival", needed_for_od: true },
-      { id: 2, title: "Exit", needed_for_od: true },
+      { id: 1, title: "Arrival Check", needed_for_od: true },
+      { id: 2, title: "Exit Check", needed_for_od: true },
+      { id: 3, title: "Photo Booth", needed_for_od: false },
     ];
 
-    type Mark = { roster_id: number; checkpoint_id: number; method: string; verified_by?: string };
+    const requiredIds = checkpoints.filter((c) => c.needed_for_od).map((c) => c.id);
 
-    const marks: Mark[] = [
-      // Student 1 (id: 1) has both checkpoints AND volunteer scan
-      { roster_id: 1, checkpoint_id: 1, method: "student_code" },
-      { roster_id: 1, checkpoint_id: 2, method: "student_code" },
-      { roster_id: 1, checkpoint_id: 1, method: "volunteer_scan", verified_by: "volunteer1" },
+    type StudentState = {
+      id: number;
+      reg_no: string;
+      od_slots: string[];
+      od_override: boolean;
+      od_override_reason?: string;
+      marks: number[];
+    };
 
-      // Student 2 (id: 2) has both checkpoints, but NO volunteer scan
-      { roster_id: 2, checkpoint_id: 1, method: "student_code" },
-      { roster_id: 2, checkpoint_id: 2, method: "student_code" },
-
-      // Student 3 (id: 3) has volunteer scan, but missed Exit checkpoint
-      { roster_id: 3, checkpoint_id: 1, method: "student_code" },
-      { roster_id: 3, checkpoint_id: 1, method: "volunteer_scan", verified_by: "volunteer1" },
+    const students: StudentState[] = [
+      // Attended both required checkpoints -> Eligible
+      {
+        id: 1,
+        reg_no: "24BCE1078",
+        od_slots: ["slot_1", "slot_2"],
+        od_override: false,
+        marks: [1, 2],
+      },
+      // Missed Exit Check -> Ineligible
+      {
+        id: 2,
+        reg_no: "24BAI1599",
+        od_slots: ["slot_1", "slot_2"],
+        od_override: false,
+        marks: [1],
+      },
+      // Missed Exit Check but has staff manual override -> Eligible
+      {
+        id: 3,
+        reg_no: "24BEE1002",
+        od_slots: ["slot_1", "slot_2", "slot_3"],
+        od_override: true,
+        od_override_reason: "Participated in organizing setup",
+        marks: [1],
+      },
     ];
 
-    function isEligibleForOd(rosterId: number): boolean {
-      const studentMarks = marks.filter((m) => m.roster_id === rosterId);
-      const hasDoorScan = studentMarks.some(
-        (m) => m.method === "volunteer_scan" || m.verified_by
-      );
-      if (!hasDoorScan) return false;
+    function evaluateEligibility(s: StudentState) {
+      const markSet = new Set(s.marks);
+      const missedRequired = requiredIds.filter((reqId) => !markSet.has(reqId));
+      const hasAllRequired = missedRequired.length === 0;
+      const hasSlots = s.od_slots.length > 0;
+      const eligible = s.od_override || (hasAllRequired && hasSlots);
 
-      const reqCheckpoints = checkpoints.filter((c) => c.needed_for_od);
-      const metAllReq = reqCheckpoints.every((rc) =>
-        studentMarks.some((m) => m.checkpoint_id === rc.id)
-      );
-      return metAllReq;
+      return {
+        eligible,
+        missed: missedRequired.map((id) => checkpoints.find((c) => c.id === id)!.title),
+        isOverridden: s.od_override,
+      };
     }
 
-    expect(isEligibleForOd(1)).toBe(true);  // Met all checkpoints + door scan
-    expect(isEligibleForOd(2)).toBe(false); // Met checkpoints but missed physical door scan
-    expect(isEligibleForOd(3)).toBe(false); // Had door scan but missed required checkpoint
+    const eval1 = evaluateEligibility(students[0]);
+    expect(eval1.eligible).toBe(true);
+
+    const eval2 = evaluateEligibility(students[1]);
+    expect(eval2.eligible).toBe(false);
+    expect(eval2.missed).toEqual(["Exit Check"]);
+
+    const eval3 = evaluateEligibility(students[2]);
+    expect(eval3.eligible).toBe(true);
+    expect(eval3.isOverridden).toBe(true);
+  });
+
+  it("5. Generates official OD Excel file from eligible students", async () => {
+    const eligibleStudents: StudentOdEntry[] = [
+      { reg_no: "24BCE1078", od_slots: ["slot_1", "slot_2", "slot_3"] },
+      {
+        reg_no: "24BAI1599",
+        od_slots: ["slot_1", "slot_2", "slot_3", "slot_4", "slot_5", "slot_6"],
+      },
+    ];
+
+    const grouped = groupStudentsIntoOdColumns(eligibleStudents);
+    expect(grouped.halfDay1).toEqual(["24BCE1078"]);
+    expect(grouped.fullDay).toEqual(["24BAI1599"]);
+
+    const buffer = await generateOdExcelWorkbook("06/11/2026", eligibleStudents);
+    expect(buffer.byteLength).toBeGreaterThan(0);
   });
 });

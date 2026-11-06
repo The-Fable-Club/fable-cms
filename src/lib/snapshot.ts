@@ -37,6 +37,8 @@ export type EventRow = {
   draft?: boolean;
   /** Official VIT EventHub page (migration 0007). */
   eventhub_url?: string | null;
+  /** Approved VIT OD slots (migration 0018). */
+  od_slots?: string[];
 };
 
 /** A question asked on the site (migration 0007). Only answered, shown, not-hidden ones reach the release. */
@@ -186,6 +188,7 @@ export function eventCandidate(r: EventRow, supabaseUrl: string, questions: Ques
     eventhub: blank(r.eventhub_url),
     faq: faqFor(r.slug, questions),
     media: items,
+    od_slots: r.od_slots ?? [],
   };
 }
 

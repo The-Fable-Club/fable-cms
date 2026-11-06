@@ -1,20 +1,24 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { addOnSpotAction, type ActionState } from "@/app/(admin)/attendance/actions";
 
 export function OnSpotForm({ eventId }: { eventId: number }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [collegeVal, setCollegeVal] = useState("VIT Chennai");
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const res = await addOnSpotAction(prev, formData);
       if (res.ok && formRef.current) {
         formRef.current.reset();
+        setCollegeVal("VIT Chennai");
       }
       return res;
     },
     { ok: false, message: "" }
   );
+
+  const isVit = collegeVal.trim().toLowerCase() === "vit chennai" || collegeVal.trim() === "";
 
   return (
     <form ref={formRef} action={formAction} className="mt-3 space-y-3">
@@ -22,16 +26,33 @@ export function OnSpotForm({ eventId }: { eventId: number }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="font-mono text-xs uppercase tracking-widest text-ink/60">
+            College *
+          </span>
+          <input
+            name="college"
+            value={collegeVal}
+            onChange={(e) => setCollegeVal(e.target.value)}
+            required
+            placeholder="VIT Chennai"
+            className="mt-1 block h-10 w-full border-2 border-ink bg-paper px-2 font-medium focus:outline-none focus:ring-2 focus:ring-clay"
+          />
+        </label>
+
+        <label className="block">
+          <span className="font-mono text-xs uppercase tracking-widest text-ink/60">
             Registration number *
           </span>
           <input
             name="reg_no"
             required
-            placeholder="24BCE1078"
+            placeholder={isVit ? "24BCE1078" : "College ID"}
             autoCapitalize="characters"
             autoComplete="off"
             className="mt-1 block h-10 w-full border-2 border-ink bg-paper px-2 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-clay"
           />
+          <span className="mt-0.5 block font-mono text-[0.65rem] text-ink/50">
+            {isVit ? "2 digits, 3 letters, 4 digits (e.g. 24BCE1078)" : "Any format accepted for other institutions"}
+          </span>
         </label>
 
         <label className="block">
