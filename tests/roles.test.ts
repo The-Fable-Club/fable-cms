@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MIN_ROLE, RANK, ROLES, can, canSaveEvent, navFor, roleFromRank, type Action, type Role } from "@/lib/roles";
+import { MIN_ROLE, RANK, ROLES, can, canDeleteEvent, canSaveEvent, navFor, roleFromRank, type Action, type Role } from "@/lib/roles";
 
 describe("role levels", () => {
   it("are ordered member < creator < admin < owner", () => {
@@ -67,6 +67,28 @@ describe("canSaveEvent", () => {
   });
   it("members may not edit events at all", () => {
     expect(canSaveEvent("member", { existingDraft: true, newDraft: true }).ok).toBe(false);
+  });
+});
+
+describe("deleting an event", () => {
+  const e = { draft: true, slug: "my-talk", registrations: 0, attendance: 0 };
+  it("lets a creator delete their draft once the web address is typed", () => {
+    expect(canDeleteEvent("creator", e, "my-talk").ok).toBe(true);
+    expect(canDeleteEvent("creator", e, "  my-talk ").ok).toBe(true);
+    expect(canDeleteEvent("creator", e, "my-tal").ok).toBe(false);
+  });
+  it("keeps live events for admins", () => {
+    expect(canDeleteEvent("creator", { ...e, draft: false }, "my-talk").ok).toBe(false);
+    expect(canDeleteEvent("admin", { ...e, draft: false }, "my-talk").ok).toBe(true);
+  });
+  it("refuses while people have registered or been marked present", () => {
+    const r = canDeleteEvent("owner", { ...e, registrations: 3 }, "my-talk");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.message).toMatch(/3 registrations/);
+    expect(canDeleteEvent("owner", { ...e, attendance: 1 }, "my-talk").ok).toBe(false);
+  });
+  it("members may not delete", () => {
+    expect(canDeleteEvent("member", e, "my-talk").ok).toBe(false);
   });
 });
 

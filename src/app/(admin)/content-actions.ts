@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCan } from "@/lib/auth";
-import { canSaveEvent } from "@/lib/roles";
+import { canDeleteEvent, canSaveEvent } from "@/lib/roles";
 import { parseEventForm, parseMemberForm } from "@/lib/forms";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +37,32 @@ export async function saveEventAction(id: number | null, _prev: FormState, form:
   revalidatePath("/events");
   revalidatePath("/");
   redirect("/events?saved=1");
+}
+
+export async function deleteEventAction(id: number, _prev: FormState, form: FormData): Promise<FormState> {
+  const admin = await requireCan("edit_draft_events");
+  const supabase = await createClient();
+  const { data } = await supabase.from("events").select("id, slug, draft").eq("id", id).maybeSingle();
+  if (!data) return { errors: {}, message: "Not deleted: that event no longer exists, or you can't see it." };
+  const [regs, roster, checks] = await Promise.all([
+    supabase.from("registrations").select("id", { count: "exact", head: true }).eq("event_slug", data.slug),
+    supabase.from("attendance_roster").select("event_id", { count: "exact", head: true }).eq("event_id", id),
+    supabase.from("attendance_checkpoints").select("event_id", { count: "exact", head: true }).eq("event_id", id),
+  ]);
+  const check = canDeleteEvent(
+    admin.role,
+    { draft: Boolean(data.draft), slug: data.slug, registrations: regs.count ?? 0, attendance: (roster.count ?? 0) + (checks.count ?? 0) },
+    String(form.get("confirm") ?? ""),
+  );
+  if (!check.ok) return { errors: {}, message: check.message };
+
+  // .select() so a delete the database quietly refused (row level security) is noticed
+  const { data: gone, error } = await supabase.from("events").delete().eq("id", id).select("id");
+  if (error) return friendly(error);
+  if (!gone?.length) return { errors: {}, message: "Not deleted: the database refused (you may not have permission)." };
+  revalidatePath("/events");
+  revalidatePath("/");
+  redirect("/events?deleted=1");
 }
 
 export async function saveMemberAction(id: number | null, _prev: FormState, form: FormData): Promise<FormState> {

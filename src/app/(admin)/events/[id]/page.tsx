@@ -4,7 +4,9 @@ import { PosterPanel } from "@/components/poster-panel";
 import { requireCan } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { EventRow } from "@/lib/snapshot";
-import { saveEventAction } from "../../content-actions";
+import { deleteEventAction, saveEventAction } from "../../content-actions";
+import { DeleteEventPanel } from "@/components/delete-event-panel";
+import { can } from "@/lib/roles";
 
 export const metadata = { title: "Edit event" };
 
@@ -22,6 +24,7 @@ export default async function EditEvent({ params }: { params: Promise<{ id: stri
       <h1 className="text-3xl font-semibold">Edit event</h1>
       <PosterPanel slug={event.slug} eventhubUrl={event.eventhub_url ?? null} />
       <EventForm action={saveEventAction.bind(null, num)} event={event} author={admin.username} role={admin.role} />
+      {(event.draft || can(admin.role, "edit_live_events")) && <DeleteEventPanel action={deleteEventAction.bind(null, num)} slug={event.slug} />}
     </div>
   );
 }
