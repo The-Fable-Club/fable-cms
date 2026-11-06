@@ -49,6 +49,25 @@ export function canSaveEvent(role: Role, opts: { existingDraft: boolean | null; 
   return { ok: true };
 }
 
+/** Can this role delete this event? Same split as saving: drafts are a creator's to remove, a
+ * live event needs an admin (the database's events_delete policy says the same). Deleting asks
+ * for the web address typed back, and is refused while people have registered or attendance has
+ * been taken: those records hang off the event, so hide it instead. */
+export function canDeleteEvent(
+  role: Role,
+  e: { draft: boolean; slug: string; registrations: number; attendance: number },
+  typed: string,
+): { ok: true } | { ok: false; message: string } {
+  if (!can(role, "edit_draft_events")) return { ok: false, message: "You don't have permission to delete events." };
+  if (!e.draft && !can(role, "edit_live_events")) return { ok: false, message: "Only admins can delete an event that is live. Ask an admin." };
+  if (typed.trim() !== e.slug) return { ok: false, message: `Not deleted: type the web address (${e.slug}) to confirm.` };
+  if (e.registrations > 0 || e.attendance > 0) {
+    const what = [e.registrations ? `${e.registrations} registration${e.registrations === 1 ? "" : "s"}` : "", e.attendance ? "attendance records" : ""].filter(Boolean).join(" and ");
+    return { ok: false, message: `Not deleted: this event has ${what}. Hide it instead (tick "Hide this event from the site" and save), so nothing is lost.` };
+  }
+  return { ok: true };
+}
+
 /** The pages in the navigation for a role. */
 export const NAV: { href: string; label: string; action: Action }[] = [
   { href: "/", label: "Dashboard", action: "read_signups" },

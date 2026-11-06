@@ -9,9 +9,9 @@ export const metadata = { title: "Events" };
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
 
-export default async function EventsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+export default async function EventsPage({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string }> }) {
   await requireCan("edit_draft_events");
-  const { saved } = await searchParams;
+  const { saved, deleted } = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("events").select("*").order("start_date", { ascending: true, nullsFirst: false });
   const rows = (data ?? []) as EventRow[];
@@ -28,6 +28,11 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
       {saved && (
         <p role="status" className="border-2 border-ink p-3 text-sm">
           Saved. It goes live on the site when you publish from the dashboard.
+        </p>
+      )}
+      {deleted && (
+        <p role="status" className="border-2 border-ink p-3 text-sm">
+          Deleted. It leaves the site when you publish from the dashboard.
         </p>
       )}
       {error && <p role="alert" className="border-2 border-clay-deep p-3 text-sm">Could not load events: {error.message}</p>}
