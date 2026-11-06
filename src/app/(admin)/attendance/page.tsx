@@ -1,127 +1,241 @@
+import Link from "next/link";
 import { requireCan } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { EventSelector } from "@/components/attendance/event-selector";
+import { RosterUploadForm } from "@/components/attendance/roster-upload-form";
+import { OnSpotForm } from "@/components/attendance/onspot-form";
+import { AttendanceManager, type CheckpointWithMarks } from "@/components/attendance/attendance-manager";
 
-export const metadata = { title: "Attendance" };
-
-// UI ONLY. Nothing on this page reads or writes data yet: every control is disabled.
-// The backend (roster import, checkpoints, marks, OD report) is being built separately.
-// Design notes: docs/ATTENDANCE-FEASIBILITY.md.
+export const metadata = { title: "Attendance & OD Management" };
 
 const label = "font-mono text-xs uppercase tracking-widest text-ink/60";
-const card = "border-2 border-ink p-4";
-const disabledBtn = "h-10 cursor-not-allowed border-2 border-ink/40 px-4 text-sm text-ink/50";
+const card = "border-2 border-ink p-4 bg-paper";
 
-export default async function Attendance() {
+type PageProps = {
+  searchParams: Promise<{ event?: string }>;
+};
+
+export default async function AttendancePage({ searchParams }: PageProps) {
   await requireCan("read_signups");
+  const params = await searchParams;
+  const supabase = await createClient();
+
+  // 1. Fetch available events
+  const { data: eventsData, error: eventsErr } = await supabase
+    .from("events")
+    .select("id, title, start_date")
+    .order("start_date", { ascending: false, nullsFirst: false });
+
+  const events = (eventsData ?? []) as { id: number; title: string; start_date?: string | null }[];
+
+  if (events.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-semibold">Attendance</h1>
+        <div className={card}>
+          <p className="text-ink/60">No events found in the database.</p>
+          <p className="mt-2 text-sm">
+            Please create an event first in the{" "}
+            <Link href="/events/new" className="underline font-semibold">
+              Events section
+            </Link>{" "}
+            to manage attendance.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Determine selected event
+  const selectedEventId = params.event ? Number(params.event) : events[0].id;
+  const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
+
+  // 2. Fetch roster counts and sample for selected event
+  const [
+    { count: totalCount },
+    { count: eventHubCount },
+    { count: onSpotCount },
+    { count: flaggedCount },
+    { data: checkpointsData },
+    { data: rosterSample },
+  ] = await Promise.all([
+    supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id),
+    supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("source", "eventhub"),
+    supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("source", "onspot"),
+    supabase.from("attendance_roster").select("*", { count: "exact", head: true }).eq("event_id", selectedEvent.id).eq("flagged", true),
+    supabase.from("attendance_checkpoints").select("id, title, opens_at, closes_at, needed_for_od").eq("event_id", selectedEvent.id).order("opens_at", { ascending: true }),
+    supabase.from("attendance_roster").select("id, reg_no, name, department, year, source, flagged, device_token").eq("event_id", selectedEvent.id).order("id", { ascending: false }).limit(20),
+  ]);
+
+  const rawCheckpoints = (checkpointsData ?? []) as {
+    id: number;
+    title: string;
+    opens_at: string;
+    closes_at: string;
+    needed_for_od: boolean;
+  }[];
+
+  const chkIds = rawCheckpoints.map((c) => c.id);
+
+  // 3. Fetch marks counts for checkpoints and volunteer door check count
+  let marksMap: Record<number, number> = {};
+  let volunteerVerifiedCount = 0;
+
+  if (chkIds.length > 0) {
+    const { data: marks } = await supabase
+      .from("attendance_marks")
+      .select("checkpoint_id, method, verified_by, roster_id")
+      .in("checkpoint_id", chkIds);
+
+    const verifiedRosterIds = new Set<number>();
+    (marks ?? []).forEach((m) => {
+      marksMap[m.checkpoint_id] = (marksMap[m.checkpoint_id] || 0) + 1;
+      if (m.method === "volunteer_scan" || m.verified_by) {
+        verifiedRosterIds.add(m.roster_id);
+      }
+    });
+    volunteerVerifiedCount = verifiedRosterIds.size;
+  }
+
+  const checkpoints: CheckpointWithMarks[] = rawCheckpoints.map((c) => ({
+    ...c,
+    marks_count: marksMap[c.id] || 0,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-3xl font-semibold">Attendance</h1>
-        <span className="border-2 border-dashed border-clay-deep px-2 py-0.5 font-mono text-xs uppercase tracking-wider text-clay-deep">Not connected yet</span>
+        <h1 className="text-3xl font-semibold">Attendance & OD Management</h1>
+        <span className="border-2 border-ink px-2.5 py-0.5 font-mono text-xs uppercase tracking-wider bg-paper-raised">
+          Live System
+        </span>
       </div>
-      <p className="text-sm text-ink/60">
-        Layout only: nothing here saves yet. The roster comes from the EventHub CSV plus on-spot additions, attendance is taken at checkpoints, and the OD list is exported at the end.
-        See <code>docs/ATTENDANCE-FEASIBILITY.md</code>.
-      </p>
 
+      {eventsErr && (
+        <p role="alert" className="border-2 border-clay-deep p-3 text-sm text-clay-deep">
+          Could not load events: {eventsErr.message}
+        </p>
+      )}
+
+      {/* Event Selection */}
       <section className={card}>
-        <label className="block max-w-md">
-          <span className={label}>Event</span>
-          <select disabled className="mt-1 block h-11 w-full cursor-not-allowed border-2 border-ink/40 bg-paper px-2 text-ink/50">
-            <option>Choose an event</option>
-          </select>
-        </label>
+        <EventSelector events={events} selectedId={selectedEvent.id} />
       </section>
 
+      {/* Roster & On-spot Row */}
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Section 1: Roster Import */}
         <section className={card}>
-          <h2 className="text-lg font-semibold">1. Roster</h2>
-          <p className="mt-1 text-sm text-ink/60">Import the EventHub CSV (can be repeated with newer files). People missing from a newer file are flagged, never deleted.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <input type="file" accept=".csv" disabled className="cursor-not-allowed text-sm text-ink/50" />
-            <button type="button" disabled className={disabledBtn}>
-              Import CSV
-            </button>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">1. Roster Import</h2>
+            <span className="font-mono text-xs text-ink/60">.xlsx / .ods / .csv</span>
           </div>
-          <dl className="mt-4 grid grid-cols-3 gap-px border-2 border-ink/30 bg-ink/30 text-center text-sm">
-            {[
-              ["From EventHub", "–"],
-              ["On-spot", "–"],
-              ["Flagged", "–"],
-            ].map(([k, v]) => (
-              <div key={k} className="bg-paper p-3">
-                <dt className={label}>{k}</dt>
-                <dd className="mt-1 text-2xl font-semibold text-ink/40">{v}</dd>
-              </div>
-            ))}
+          <p className="mt-1 text-sm text-ink/60">
+            Import the EventHub export spreadsheet. You can re-import with newer files at any time; students missing from a newer file are flagged, never deleted.
+          </p>
+
+          <RosterUploadForm eventId={selectedEvent.id} />
+
+          <dl className="mt-4 grid grid-cols-4 gap-px border-2 border-ink/30 bg-ink/30 text-center text-sm">
+            <div className="bg-paper p-3">
+              <dt className={label}>Total</dt>
+              <dd className="mt-1 text-2xl font-semibold">{totalCount ?? 0}</dd>
+            </div>
+            <div className="bg-paper p-3">
+              <dt className={label}>EventHub</dt>
+              <dd className="mt-1 text-2xl font-semibold">{eventHubCount ?? 0}</dd>
+            </div>
+            <div className="bg-paper p-3">
+              <dt className={label}>On-spot</dt>
+              <dd className="mt-1 text-2xl font-semibold">{onSpotCount ?? 0}</dd>
+            </div>
+            <div className="bg-paper p-3">
+              <dt className={label}>Door ID</dt>
+              <dd className="mt-1 text-2xl font-semibold text-clay-deep">{volunteerVerifiedCount}</dd>
+            </div>
           </dl>
+          {(flaggedCount ?? 0) > 0 && (
+            <p className="mt-2 text-xs font-mono text-clay-deep">
+              Notice: {flaggedCount} student(s) flagged as missing from latest import.
+            </p>
+          )}
         </section>
 
+        {/* Section 2: On-spot Registration */}
         <section className={card}>
-          <h2 className="text-lg font-semibold">2. On-spot registration</h2>
-          <p className="mt-1 text-sm text-ink/60">Added at the event. Each entry is marked as on-spot, with who added it and when.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {["Registration number", "Full name", "Department", "Year"].map((f) => (
-              <label key={f} className="block">
-                <span className={label}>{f}</span>
-                <input disabled className="mt-1 block h-10 w-full cursor-not-allowed border-2 border-ink/40 bg-paper px-2" />
-              </label>
-            ))}
-          </div>
-          <button type="button" disabled className={`${disabledBtn} mt-3`}>
-            Add on-spot
-          </button>
+          <h2 className="text-lg font-semibold">2. On-spot Registration</h2>
+          <p className="mt-1 text-sm text-ink/60">
+            For walk-ins registering directly at the venue entrance. Adds the student directly into the verified event roster.
+          </p>
+
+          <OnSpotForm eventId={selectedEvent.id} />
         </section>
       </div>
 
-      <section className={card}>
-        <h2 className="text-lg font-semibold">3. Checkpoints</h2>
-        <p className="mt-1 text-sm text-ink/60">For example arrival, mid-event, exit, end. Each opens for a time window; the ones marked “needed for OD” all have to be present.</p>
-        <table className="mt-3 w-full text-left text-sm">
-          <thead className={label}>
-            <tr>
-              <th className="py-2">Checkpoint</th>
-              <th>Opens</th>
-              <th>Closes</th>
-              <th>Needed for OD</th>
-              <th>Marked</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody className="text-ink/40">
-            {["Arrival", "Mid-event", "Exit"].map((c) => (
-              <tr key={c} className="border-t border-ink/20">
-                <td className="py-2">{c}</td>
-                <td>–</td>
-                <td>–</td>
-                <td>–</td>
-                <td>–</td>
-                <td className="text-right">
-                  <button type="button" disabled className={disabledBtn}>
-                    Show code
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button type="button" disabled className={`${disabledBtn} mt-3`}>
-          Add checkpoint
-        </button>
-      </section>
+      {/* Sections 3 & 4: Checkpoints + Door Scanner + Export */}
+      <AttendanceManager eventId={selectedEvent.id} checkpoints={checkpoints} />
 
+      {/* Section 5: Recent Roster Entries */}
       <section className={card}>
-        <h2 className="text-lg font-semibold">4. Door check and OD list</h2>
-        <p className="mt-1 text-sm text-ink/60">A volunteer scans or types a registration number after checking the ID card. At the end, download who met every required checkpoint.</p>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <button type="button" disabled className={disabledBtn}>
-            Open door scanner
-          </button>
-          <button type="button" disabled className={disabledBtn}>
-            Download OD list (CSV)
-          </button>
-          <button type="button" disabled className={disabledBtn}>
-            View change log
-          </button>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Roster Preview (Recent {rosterSample?.length ?? 0})</h2>
+          <span className="font-mono text-xs uppercase text-ink/50">Top recent entries</span>
+        </div>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b-2 border-ink font-mono text-xs uppercase tracking-widest text-ink/60">
+              <tr>
+                <th className="py-2">Reg No</th>
+                <th>Name</th>
+                <th>Dept / Year</th>
+                <th>Source</th>
+                <th>Device Bound</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/20">
+              {(rosterSample ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-ink/40">
+                    No attendees registered yet. Import a spreadsheet or add on-spot above.
+                  </td>
+                </tr>
+              ) : (
+                (rosterSample ?? []).map((r) => (
+                  <tr key={r.id} className="hover:bg-paper-raised">
+                    <td className="py-2 font-mono font-medium">{r.reg_no}</td>
+                    <td>{r.name}</td>
+                    <td className="text-xs text-ink/70">
+                      {[r.department, r.year].filter(Boolean).join(" · ") || "–"}
+                    </td>
+                    <td>
+                      <span className="font-mono text-[0.7rem] uppercase px-1.5 py-0.5 border border-ink/30">
+                        {r.source}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs">
+                      {r.device_token ? (
+                        <span className="text-ink font-medium" title={r.device_token}>
+                          Bound
+                        </span>
+                      ) : (
+                        <span className="text-ink/40">Unbound</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.flagged ? (
+                        <span className="border border-clay-deep bg-clay-deep/10 px-1.5 py-0.5 font-mono text-[0.65rem] uppercase text-clay-deep">
+                          Missing
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[0.65rem] uppercase text-ink/60">Active</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
