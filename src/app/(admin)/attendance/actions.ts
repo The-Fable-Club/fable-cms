@@ -2,15 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { requireCan } from "@/lib/auth";
-import { REG_NO_REGEX, parseRosterFile } from "@/lib/roster-parser";
+import { parseRosterFile } from "@/lib/roster-parser";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { ok: boolean; message: string };
 
+export type SearchStudentResult = {
+  id: number;
+  reg_no: string;
+  name: string;
+  department: string | null;
+  year: string | null;
+  college: string | null;
+  od_slots: string[];
+};
+
+import { VIT_REG_NO_REGEX } from "@/lib/od-constants";
+
+
 function toIstIso(dt: string): string {
   if (!dt) return "";
   if (dt.includes("+") || dt.endsWith("Z")) return dt;
-  // If formatted like YYYY-MM-DDTHH:mm, append seconds and +05:30 offset
   const full = dt.length === 16 ? `${dt}:00` : dt;
   return `${full}+05:30`;
 }
@@ -65,7 +77,7 @@ export async function uploadRosterAction(_prev: ActionState, form: FormData): Pr
     phone: a.phone,
     department: a.department,
     year: a.year,
-    college: a.college,
+    college: a.college || "VIT Chennai",
     college_type: a.college_type,
     payment_status: a.payment_status,
     team_id: a.team_id,
@@ -74,7 +86,6 @@ export async function uploadRosterAction(_prev: ActionState, form: FormData): Pr
     imported_by: admin.username,
   }));
 
-  // Upsert attendees into roster
   const { error: upsertErr } = await supabase
     .from("attendance_roster")
     .upsert(rows, { onConflict: "event_id,reg_no" });
@@ -93,7 +104,6 @@ export async function uploadRosterAction(_prev: ActionState, form: FormData): Pr
     await supabase.from("attendance_roster").update({ flagged: true }).in("id", missingIds);
   }
 
-  // Log to audit_log
   await supabase.from("audit_log").insert({
     actor: admin.username,
     entity: "attendance_roster",
@@ -126,13 +136,30 @@ export async function addOnSpotAction(_prev: ActionState, form: FormData): Promi
   const name = String(form.get("name") || "").trim();
   const department = String(form.get("department") || "").trim() || null;
   const year = String(form.get("year") || "").trim() || null;
-  const phone = String(form.get("phone") || "").trim().replace(/[^0-9+]/g, "") || null;
+  const collegeInput = String(form.get("college") || "").trim();
+  const college = collegeInput || "VIT Chennai";
 
-  if (!REG_NO_REGEX.test(regNo)) {
-    return { ok: false, message: "Enter a valid registration number (e.g. 24BCE1078)." };
-  }
   if (!name) {
     return { ok: false, message: "Student full name is required." };
+  }
+  if (!regNo) {
+    return { ok: false, message: "Registration number is required." };
+  }
+
+  // If college is VIT Chennai or blank, enforce 2 digits, 3 letters, 4 digits
+  const isVitChennai = college.toLowerCase() === "vit chennai";
+  if (isVitChennai) {
+    if (!VIT_REG_NO_REGEX.test(regNo)) {
+      return {
+        ok: false,
+        message: "VIT Chennai registration numbers must be 2 digits, 3 letters, 4 digits (e.g. 24BCE1078).",
+      };
+    }
+  } else {
+    // Other colleges: accept any non-empty registration number up to 50 characters
+    if (regNo.length < 2 || regNo.length > 50) {
+      return { ok: false, message: "Enter a valid registration number (2 to 50 characters)." };
+    }
   }
 
   const supabase = await createClient();
@@ -142,7 +169,7 @@ export async function addOnSpotAction(_prev: ActionState, form: FormData): Promi
     name,
     department,
     year,
-    phone,
+    college,
     source: "onspot",
     flagged: false,
     imported_by: admin.username,
@@ -160,7 +187,7 @@ export async function addOnSpotAction(_prev: ActionState, form: FormData): Promi
     entity: "attendance_roster",
     entity_id: String(eventId),
     action: "add_onspot_registration",
-    detail: { reg_no: regNo, name, department, year },
+    detail: { reg_no: regNo, name, department, year, college },
   });
 
   revalidatePath("/attendance");
@@ -221,65 +248,105 @@ export async function deleteCheckpointAction(checkpointId: number): Promise<Acti
   return { ok: true, message: "Checkpoint removed." };
 }
 
-/** Volunteer door check & physical ID card verification by student roster ID. */
-export async function volunteerVerifyAction(rosterId: number, checkpointId?: number): Promise<ActionState> {
-  await requireCan("read_signups"); // Any authenticated staff / Member can verify ID at door
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("volunteer_verify_student", {
-    p_roster_id: rosterId,
-    p_checkpoint_id: checkpointId || null,
-  });
+/** Search roster for typeahead autocomplete matching reg_no or name. */
+export async function searchRosterAction(eventId: number, query: string): Promise<SearchStudentResult[]> {
+  await requireCan("read_signups");
+  const clean = query.trim();
+  if (!clean || clean.length < 1) return [];
 
-  if (error) return { ok: false, message: error.message };
-  const res = data as { ok?: boolean; message?: string };
-  revalidatePath("/attendance");
-  return { ok: res.ok ?? true, message: res.message || "Student verified." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("attendance_roster")
+    .select("id, reg_no, name, department, year, college, od_slots")
+    .eq("event_id", eventId)
+    .or(`reg_no.ilike.%${clean}%,name.ilike.%${clean}%`)
+    .limit(15);
+
+  if (error) {
+    console.error("searchRosterAction error:", error.message);
+    // Fallback without od_slots in case column not migrated yet
+    const fallback = await supabase
+      .from("attendance_roster")
+      .select("id, reg_no, name, department, year, college")
+      .eq("event_id", eventId)
+      .or(`reg_no.ilike.%${clean}%,name.ilike.%${clean}%`)
+      .limit(15);
+
+    if (fallback.data) {
+      return fallback.data.map((d) => ({
+        id: d.id,
+        reg_no: d.reg_no,
+        name: d.name,
+        department: d.department,
+        year: d.year,
+        college: d.college,
+        od_slots: [],
+      }));
+    }
+    return [];
+  }
+
+  return (data ?? []).map((d) => ({
+    id: d.id,
+    reg_no: d.reg_no,
+    name: d.name,
+    department: d.department,
+    year: d.year,
+    college: d.college,
+    od_slots: Array.isArray(d.od_slots) ? (d.od_slots as string[]) : [],
+  }));
 }
 
-/** Volunteer door check & physical ID card verification by registration number. */
-export async function volunteerVerifyByRegNoAction(
-  eventId: number,
-  regNoRaw: string,
-  checkpointId?: number
-): Promise<ActionState & { student?: { name: string; reg_no: string; department?: string; year?: string } }> {
-  await requireCan("read_signups");
-  const regNo = regNoRaw.trim().toUpperCase();
-  if (!REG_NO_REGEX.test(regNo)) {
-    return { ok: false, message: `"${regNoRaw}" is not a valid VIT registration number.` };
-  }
-
+/** Staff records attendance for a student at a checkpoint and updates their OD slots. */
+export async function staffRecordAttendanceAction(
+  rosterId: number,
+  checkpointId: number,
+  odSlots?: string[]
+): Promise<ActionState & { student?: { id: number; reg_no: string; name: string } }> {
+  const admin = await requireCan("read_signups");
   const supabase = await createClient();
-  const { data: roster, error: findErr } = await supabase
-    .from("attendance_roster")
-    .select("id, name, reg_no, department, year, flagged")
-    .eq("event_id", eventId)
-    .eq("reg_no", regNo)
-    .maybeSingle();
 
-  if (findErr) return { ok: false, message: findErr.message };
-  if (!roster) {
-    return { ok: false, message: `Registration number ${regNo} is not in the roster for this event.` };
-  }
-  if (roster.flagged) {
-    return { ok: false, message: `Warning: ${roster.name} (${regNo}) is flagged as missing from the latest EventHub roster.` };
-  }
-
-  const { data, error } = await supabase.rpc("volunteer_verify_student", {
-    p_roster_id: roster.id,
-    p_checkpoint_id: checkpointId || null,
+  const { data, error } = await supabase.rpc("staff_record_attendance", {
+    p_roster_id: rosterId,
+    p_checkpoint_id: checkpointId,
+    p_od_slots: odSlots ?? null,
+    p_actor: admin.username,
   });
 
   if (error) return { ok: false, message: error.message };
-  const res = data as { ok?: boolean; message?: string };
+  const res = data as {
+    ok?: boolean;
+    message?: string;
+    student?: { id: number; reg_no: string; name: string };
+  };
+
   revalidatePath("/attendance");
   return {
     ok: res.ok ?? true,
-    message: res.message || `Verified ${roster.name} (${roster.reg_no}).`,
-    student: {
-      name: roster.name,
-      reg_no: roster.reg_no,
-      department: roster.department ?? undefined,
-      year: roster.year ?? undefined,
-    },
+    message: res.message || "Attendance recorded.",
+    student: res.student,
   };
+}
+
+/** Toggle manual OD override for a student who missed checkpoints. */
+export async function toggleOdOverrideAction(
+  rosterId: number,
+  override: boolean,
+  reason?: string
+): Promise<ActionState> {
+  const admin = await requireCan("edit_draft_events"); // Creator role or higher
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("toggle_od_override", {
+    p_roster_id: rosterId,
+    p_override: override,
+    p_reason: reason || null,
+    p_actor: admin.username,
+  });
+
+  if (error) return { ok: false, message: error.message };
+  const res = data as { ok?: boolean; message?: string };
+
+  revalidatePath("/attendance");
+  return { ok: res.ok ?? true, message: res.message || "OD status updated." };
 }

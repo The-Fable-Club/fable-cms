@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { PresenterModal } from "./presenter-modal";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckpointDialog, type CheckpointItem } from "./checkpoint-dialog";
-import { DoorScannerModal } from "./door-scanner";
+import { StaffAttendanceModal } from "./staff-attendance-modal";
 
 export type CheckpointWithMarks = CheckpointItem & {
   marks_count: number;
@@ -38,14 +37,28 @@ function getCheckpointStatus(opensAt: string, closesAt: string) {
 export function AttendanceManager({
   eventId,
   checkpoints,
+  eventOdSlots = [],
 }: {
   eventId: number;
   checkpoints: CheckpointWithMarks[];
+  eventOdSlots?: string[];
 }) {
-  const [presenterId, setPresenterId] = useState<number | null>(null);
+  const router = useRouter();
   const [editingCheckpoint, setEditingCheckpoint] = useState<CheckpointItem | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [showDoorScanner, setShowDoorScanner] = useState(false);
+  const [showStaffModal, setShowStaffModal] = useState(false);
+
+  // Background auto-refresh every 3.5 seconds so attendance numbers update automatically without reloading.
+  // Pauses while staff modal or checkpoint dialogs are active to prevent UI disruption.
+  useEffect(() => {
+    if (showStaffModal || isAdding || editingCheckpoint !== null) {
+      return;
+    }
+    const timer = setInterval(() => {
+      router.refresh();
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [router, showStaffModal, isAdding, editingCheckpoint]);
 
   return (
     <>
@@ -53,9 +66,9 @@ export function AttendanceManager({
       <section className="border-2 border-ink p-4 bg-paper">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold">3. Checkpoints & Rolling Presenter Codes</h2>
+            <h2 className="text-lg font-semibold">3. Checkpoints</h2>
             <p className="mt-1 text-sm text-ink/60">
-              Checkpoints open for specific time windows. Organizers project the live 20s rolling code on the room screen.
+              Checkpoints define the verification stages of your event (e.g. Arrival Check, Mid-event Check, Exit Check).
             </p>
           </div>
           <button
@@ -76,7 +89,7 @@ export function AttendanceManager({
                 <th>Closes (IST)</th>
                 <th>OD Required</th>
                 <th>Status</th>
-                <th>Marked</th>
+                <th>Marked Count</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
@@ -97,7 +110,7 @@ export function AttendanceManager({
                       <td className="tabular-nums text-xs text-ink/70">{formatIstTime(c.closes_at)}</td>
                       <td>
                         {c.needed_for_od ? (
-                          <span className="border border-ink/40 bg-paper-raised px-1.5 py-0.5 font-mono text-[0.65rem] uppercase">
+                          <span className="border border-ink/40 bg-paper-raised px-1.5 py-0.5 font-mono text-[0.65rem] uppercase font-bold">
                             Yes
                           </span>
                         ) : (
@@ -111,13 +124,6 @@ export function AttendanceManager({
                       </td>
                       <td className="font-mono font-semibold">{c.marks_count}</td>
                       <td className="space-x-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setPresenterId(c.id)}
-                          className="border-2 border-ink bg-paper px-3 py-1 font-mono text-xs font-semibold uppercase tracking-wider hover:bg-clay"
-                        >
-                          Show Code
-                        </button>
                         <button
                           type="button"
                           onClick={() => setEditingCheckpoint(c)}
@@ -135,36 +141,40 @@ export function AttendanceManager({
         </div>
       </section>
 
-      {/* 4. Door Check and OD List */}
+      {/* 4. Staff Attendance & OD List */}
       <section className="border-2 border-ink p-4 bg-paper">
-        <h2 className="text-lg font-semibold">4. Door Check and OD Verification</h2>
+        <h2 className="text-lg font-semibold">4. Staff Attendance & University OD Submission</h2>
         <p className="mt-1 text-sm text-ink/60">
-          Volunteers scan student ID cards at the door. When the event concludes, download the official university On-Duty CSV report containing students who satisfied every required checkpoint.
+          Staff members record student attendance at checkpoints and verify their OD time slots. When the event concludes, export the official formatted college OD submission sheet or download the internal audit report.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => setShowDoorScanner(true)}
-            className="border-2 border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-paper transition-colors hover:bg-clay-deep"
+            onClick={() => setShowStaffModal(true)}
+            className="border-2 border-ink bg-ink px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-paper transition-colors hover:bg-clay-deep"
           >
-            Open Door Scanner
+            Record Attendance
           </button>
+
+          <a
+            href={`/export/od-excel/${eventId}`}
+            download
+            className="inline-flex items-center border-2 border-ink bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-paper-raised shadow-sm"
+          >
+            Download Official OD Excel (.xlsx)
+          </a>
 
           <a
             href={`/export/attendance/${eventId}`}
             download
-            className="inline-flex items-center border-2 border-ink bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-paper-raised"
+            className="inline-flex items-center border-2 border-ink bg-paper-raised px-5 py-2.5 text-sm font-semibold text-ink/80 transition-colors hover:bg-clay"
           >
-            Download OD List (CSV)
+            Download Internal Audit (CSV)
           </a>
         </div>
       </section>
 
-      {/* Modals */}
-      {presenterId !== null && (
-        <PresenterModal checkpointId={presenterId} onClose={() => setPresenterId(null)} />
-      )}
-
+      {/* Checkpoint Dialog */}
       {(isAdding || editingCheckpoint !== null) && (
         <CheckpointDialog
           eventId={eventId}
@@ -176,11 +186,13 @@ export function AttendanceManager({
         />
       )}
 
-      {showDoorScanner && (
-        <DoorScannerModal
+      {/* Staff Attendance Modal */}
+      {showStaffModal && (
+        <StaffAttendanceModal
           eventId={eventId}
           checkpoints={checkpoints}
-          onClose={() => setShowDoorScanner(false)}
+          eventOdSlots={eventOdSlots}
+          onClose={() => setShowStaffModal(false)}
         />
       )}
     </>

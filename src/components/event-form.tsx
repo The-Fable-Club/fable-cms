@@ -9,6 +9,7 @@ import type { FormState } from "@/app/(admin)/form-state";
 import { ArtPicker, Field, ModeGroup, inputCls } from "@/components/form-bits";
 import { HubEditor } from "@/components/hub-editor";
 import { MediaField } from "@/components/media-field";
+import { VIT_OD_SLOTS, normalizeSlotId } from "@/lib/od-constants";
 
 type Props = {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
@@ -21,6 +22,7 @@ const blank: Omit<EventRow, "id"> = {
   slug: "", title: "", kind: "Workshop", phase: 1, status_override: null, date_mode: "exact", start_date: null, end_date: null, date_month: null,
   date_text: null, time_mode: "text", time_text: "", venue_mode: "text", venue: "", seats_mode: "open", seats: null, apply_mode: "none",
   apply_url: null, summary: "", description: "", highlights: [], art: "sprouts", photo_path: null, media_ids: [], hub: [], archived: false, draft: true,
+  od_slots: [],
 };
 
 export function EventForm({ action, event, author, role }: Props) {
@@ -209,6 +211,32 @@ export function EventForm({ action, event, author, role }: Props) {
       >
         <input name="eventhub_url" type="url" defaultValue={e.eventhub_url ?? ""} placeholder="https://eventhubcc.vit.ac.in/EventHub/…" className={inputCls} {...bad("eventhub_url")} />
       </Field>
+
+      <fieldset className="border-2 border-ink p-4">
+        <legend className="px-2 font-mono text-xs uppercase tracking-widest text-ink/60">
+          On-Duty (OD) Approved Time Slots
+        </legend>
+        <p className="mb-3 text-xs text-ink/60">
+          Select which official VIT academic time slots On-Duty attendance will be provided for. These are shown on the public site and used for generating the official college OD sheet.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {VIT_OD_SLOTS.map((slot) => {
+            const checked = (e.od_slots ?? []).some((s) => normalizeSlotId(s) === slot.id);
+            return (
+              <label key={slot.id} className="flex cursor-pointer items-center gap-2 border-2 border-ink/30 p-2.5 hover:border-ink hover:bg-paper-raised">
+                <input
+                  type="checkbox"
+                  name="od_slots"
+                  value={slot.id}
+                  defaultChecked={checked}
+                  className="size-4 border-2 border-ink accent-ink"
+                />
+                <span className="font-mono text-xs font-medium text-ink">{slot.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <Field label="Description" hint="Separate paragraphs with an empty line." error={err.description}>
         <textarea name="description" defaultValue={e.description} rows={7} className={`${inputCls} h-auto py-2`} />
