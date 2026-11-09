@@ -38,10 +38,13 @@ export function AttendanceManager({
   eventId,
   checkpoints,
   eventOdSlots = [],
+  manage = false,
 }: {
   eventId: number;
   checkpoints: CheckpointWithMarks[];
   eventOdSlots?: string[];
+  /** may change checkpoints and record attendance (admins); otherwise view and export only */
+  manage?: boolean;
 }) {
   const router = useRouter();
   const [editingCheckpoint, setEditingCheckpoint] = useState<CheckpointItem | null>(null);
@@ -71,13 +74,15 @@ export function AttendanceManager({
               Checkpoints define the verification stages of your event (e.g. Arrival Check, Mid-event Check, Exit Check).
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="border-2 border-ink bg-ink px-4 py-2 text-xs font-semibold uppercase tracking-wider text-paper transition-colors hover:bg-clay-deep"
-          >
-            + Add Checkpoint
-          </button>
+          {manage && (
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="border-2 border-ink bg-ink px-4 py-2 text-xs font-semibold uppercase tracking-wider text-paper transition-colors hover:bg-clay-deep"
+            >
+              + Add Checkpoint
+            </button>
+          )}
         </div>
 
         <div className="mt-4 overflow-x-auto">
@@ -124,13 +129,15 @@ export function AttendanceManager({
                       </td>
                       <td className="font-mono font-semibold">{c.marks_count}</td>
                       <td className="space-x-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setEditingCheckpoint(c)}
-                          className="border border-ink/40 px-2.5 py-1 font-mono text-xs uppercase hover:border-ink hover:bg-paper-raised"
-                        >
-                          Edit
-                        </button>
+                        {manage && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCheckpoint(c)}
+                            className="border border-ink/40 px-2.5 py-1 font-mono text-xs uppercase hover:border-ink hover:bg-paper-raised"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -148,13 +155,15 @@ export function AttendanceManager({
           Staff members record student attendance at checkpoints and verify their OD time slots. When the event concludes, export the official formatted college OD submission sheet or download the internal audit report.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setShowStaffModal(true)}
-            className="border-2 border-ink bg-ink px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-paper transition-colors hover:bg-clay-deep"
-          >
-            Record Attendance
-          </button>
+          {manage && (
+            <button
+              type="button"
+              onClick={() => setShowStaffModal(true)}
+              className="border-2 border-ink bg-ink px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-paper transition-colors hover:bg-clay-deep"
+            >
+              Record Attendance
+            </button>
+          )}
 
           <a
             href={`/export/od-excel/${eventId}`}
@@ -175,7 +184,7 @@ export function AttendanceManager({
       </section>
 
       {/* Checkpoint Dialog */}
-      {(isAdding || editingCheckpoint !== null) && (
+      {manage && (isAdding || editingCheckpoint !== null) && (
         <CheckpointDialog
           eventId={eventId}
           checkpoint={editingCheckpoint}
@@ -187,7 +196,7 @@ export function AttendanceManager({
       )}
 
       {/* Staff Attendance Modal */}
-      {showStaffModal && (
+      {manage && showStaffModal && (
         <StaffAttendanceModal
           eventId={eventId}
           checkpoints={checkpoints}
