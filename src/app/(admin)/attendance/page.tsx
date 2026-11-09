@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireCan } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { EventSelector } from "@/components/attendance/event-selector";
 import { RosterUploadForm } from "@/components/attendance/roster-upload-form";
@@ -30,7 +31,9 @@ function formatShortTime(iso: string) {
 }
 
 export default async function AttendancePage({ searchParams }: PageProps) {
-  await requireCan("read_signups");
+  const me = await requireCan("read_signups");
+  // members can look; importing, walk-ins, checkpoints, marking and OD need an admin
+  const manage = can(me.role, "take_attendance");
   const params = await searchParams;
   const supabase = await createClient();
 
@@ -160,7 +163,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
             Import the EventHub export spreadsheet. You can re-import with newer files at any time; students missing from a newer file are flagged, never deleted.
           </p>
 
-          <RosterUploadForm eventId={selectedEvent.id} />
+          {manage ? <RosterUploadForm eventId={selectedEvent.id} /> : <p className="mt-3 text-sm text-ink/60">Importing a roster needs an admin.</p>}
 
           <dl className="mt-4 grid grid-cols-4 gap-px border-2 border-ink/30 bg-ink/30 text-center text-sm">
             <div className="bg-paper p-3">
@@ -194,7 +197,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
             For walk-ins registering directly at the venue entrance. Adds the student directly into the verified event roster.
           </p>
 
-          <OnSpotForm eventId={selectedEvent.id} />
+          {manage ? <OnSpotForm eventId={selectedEvent.id} /> : <p className="mt-3 text-sm text-ink/60">Adding walk-ins needs an admin.</p>}
         </section>
       </div>
 
@@ -203,6 +206,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
         eventId={selectedEvent.id}
         checkpoints={checkpoints}
         eventOdSlots={eventOdSlots}
+        manage={manage}
       />
 
       {/* Section 5: Roster Preview with Per-Checkpoint Marks & OD Status */}
@@ -318,11 +322,13 @@ export default async function AttendancePage({ searchParams }: PageProps) {
 
                       {/* Override Action */}
                       <td className="text-right whitespace-nowrap">
-                        <OdOverrideButton
-                          rosterId={r.id}
-                          isOverridden={isOverridden}
-                          studentName={r.name}
-                        />
+                        {manage && (
+                          <OdOverrideButton
+                            rosterId={r.id}
+                            isOverridden={isOverridden}
+                            studentName={r.name}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

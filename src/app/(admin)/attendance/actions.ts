@@ -29,7 +29,7 @@ function toIstIso(dt: string): string {
 
 /** Upload and process EventHub spreadsheet (.xlsx, .csv, .ods). */
 export async function uploadRosterAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireCan("triage_signups");
+  const admin = await requireCan("take_attendance");
   const eventId = Number(form.get("event_id"));
   if (!Number.isInteger(eventId) || eventId <= 0) {
     return { ok: false, message: "Please select an event." };
@@ -126,7 +126,7 @@ export async function uploadRosterAction(_prev: ActionState, form: FormData): Pr
 
 /** Add a single on-spot registrant at the venue. */
 export async function addOnSpotAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const admin = await requireCan("triage_signups");
+  const admin = await requireCan("take_attendance");
   const eventId = Number(form.get("event_id"));
   if (!Number.isInteger(eventId) || eventId <= 0) {
     return { ok: false, message: "Please select an event." };
@@ -196,7 +196,7 @@ export async function addOnSpotAction(_prev: ActionState, form: FormData): Promi
 
 /** Create or update a checkpoint with IST time parsing. */
 export async function saveCheckpointAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  await requireCan("triage_signups");
+  await requireCan("take_attendance");
   const eventId = Number(form.get("event_id"));
   const checkpointId = form.get("checkpoint_id") ? Number(form.get("checkpoint_id")) : null;
   const title = String(form.get("title") || "").trim();
@@ -240,7 +240,7 @@ export async function saveCheckpointAction(_prev: ActionState, form: FormData): 
 
 /** Delete a checkpoint. */
 export async function deleteCheckpointAction(checkpointId: number): Promise<ActionState> {
-  await requireCan("triage_signups");
+  await requireCan("take_attendance");
   const supabase = await createClient();
   const { error } = await supabase.from("attendance_checkpoints").delete().eq("id", checkpointId);
   if (error) return { ok: false, message: error.message };
@@ -303,14 +303,14 @@ export async function staffRecordAttendanceAction(
   checkpointId: number,
   odSlots?: string[]
 ): Promise<ActionState & { student?: { id: number; reg_no: string; name: string } }> {
-  const admin = await requireCan("read_signups");
+  await requireCan("take_attendance");
   const supabase = await createClient();
 
+  // the database records the signed-in user as the one who marked it (migration 0019)
   const { data, error } = await supabase.rpc("staff_record_attendance", {
     p_roster_id: rosterId,
     p_checkpoint_id: checkpointId,
     p_od_slots: odSlots ?? null,
-    p_actor: admin.username,
   });
 
   if (error) return { ok: false, message: error.message };
@@ -334,14 +334,14 @@ export async function toggleOdOverrideAction(
   override: boolean,
   reason?: string
 ): Promise<ActionState> {
-  const admin = await requireCan("edit_draft_events"); // Creator role or higher
+  await requireCan("take_attendance");
   const supabase = await createClient();
 
+  // the database records the signed-in user as the one who changed it (migration 0019)
   const { data, error } = await supabase.rpc("toggle_od_override", {
     p_roster_id: rosterId,
     p_override: override,
     p_reason: reason || null,
-    p_actor: admin.username,
   });
 
   if (error) return { ok: false, message: error.message };
