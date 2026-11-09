@@ -29,10 +29,15 @@ describe("permissions", () => {
     const table: Record<Role, Action[]> = {
       member: ["read_signups", "read_questions"],
       creator: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions"],
-      admin: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions", "edit_live_events", "manage_members", "triage_signups", "moderate_questions", "publish", "view_releases", "clean_media"],
+      admin: ["read_signups", "read_questions", "edit_draft_events", "upload_media", "answer_questions", "edit_live_events", "manage_members", "triage_signups", "take_attendance", "moderate_questions", "publish", "view_releases", "clean_media"],
       owner: actions,
     };
     for (const r of ROLES) expect(actions.filter((a) => can(r, a)).sort(), r).toEqual([...table[r]].sort());
+  });
+  it("only admins take attendance and OD (an official university request)", () => {
+    expect(can("member", "take_attendance")).toBe(false);
+    expect(can("creator", "take_attendance")).toBe(false);
+    expect(can("admin", "take_attendance")).toBe(true);
   });
   it("only admins and owners clean up media", () => {
     expect(can("creator", "clean_media")).toBe(false);

@@ -10,7 +10,7 @@ export const RANK: Record<Role, number> = { member: 1, creator: 2, admin: 3, own
 export const ROLE_INFO: Record<Role, { label: string; summary: string }> = {
   member: { label: "Member", summary: "Can read applications and registrations. Cannot change or publish anything." },
   creator: { label: "Creator", summary: "Can also create events and save them as drafts. Cannot edit members, change live events or publish." },
-  admin: { label: "Admin", summary: "Can also manage everything on the site (events, members, sign-ups) and publish. Cannot manage people." },
+  admin: { label: "Admin", summary: "Can also manage everything on the site (events, members, sign-ups), take attendance and OD, and publish. Cannot manage people." },
   owner: { label: "Owner", summary: "Everything, including adding, removing and re-leveling people, and rolling back releases." },
 };
 
@@ -28,6 +28,7 @@ export const MIN_ROLE = {
   edit_live_events: "admin", // change or delete an event that is not a draft, and take a draft live
   manage_members: "admin", // the people shown on the site
   triage_signups: "admin", // change status and notes on applications and registrations
+  take_attendance: "admin", // import the roster, add walk-ins, manage checkpoints, mark people present, set OD slots and overrides
   moderate_questions: "admin", // show an answer on the site, hide, email the asker, delete
   publish: "admin",
   view_releases: "admin",
@@ -57,7 +58,7 @@ export const NAV: { href: string; label: string; action: Action }[] = [
   { href: "/applications", label: "Applications", action: "read_signups" },
   { href: "/registrations", label: "Registrations", action: "read_signups" },
   { href: "/questions", label: "Questions", action: "read_questions" },
-  { href: "/attendance", label: "Attendance", action: "read_signups" }, // UI only for now
+  { href: "/attendance", label: "Attendance", action: "read_signups" }, // members can look; changes need take_attendance
   { href: "/releases", label: "Releases", action: "view_releases" },
   { href: "/media", label: "Media", action: "clean_media" },
   { href: "/admins", label: "People", action: "manage_people" },
