@@ -1,6 +1,7 @@
 import { requireCan } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { generateOdExcelWorkbook } from "@/lib/od-excel-generator";
+import { VIT_REG_NO_REGEX } from "@/lib/od-constants";
 
 function formatDateForOd(isoDate?: string | null): string {
   if (!isoDate) {
@@ -77,16 +78,24 @@ export async function GET(_req: Request, { params }: { params: Promise<{ eventId
     set.add(m.checkpoint_id);
   });
 
-  // Filter students who are eligible for OD:
-  // Either manually overridden, or satisfied all required checkpoints (or marked at any checkpoint if none marked needed_for_od)
+  // Filter students who are eligible for the official OD list:
+  // 1. Only VIT Chennai students (registration number \d{2}[A-Za-z]{3}\d{4})
+  // 2. Either manually overridden, or did not miss any compulsory checkpoint
+  //    (students are in the official file by default, removed only if they missed 1 or more compulsory checkpoints)
   const eligibleStudents = roster.filter((student) => {
-    const studentMarks = marksByRosterId.get(student.id) ?? new Set<number>();
-    const satisfiedAllRequired = requiredCheckpointIds.length === 0
-      ? studentMarks.size > 0
-      : requiredCheckpointIds.every((reqId) => studentMarks.has(reqId));
-    const isOverridden = Boolean(student.od_override);
+    const regNo = (student.reg_no || "").trim();
+    if (!VIT_REG_NO_REGEX.test(regNo)) {
+      return false; // Exclude non-VIT students from official OD list
+    }
 
-    return isOverridden || satisfiedAllRequired;
+    const isOverridden = Boolean(student.od_override);
+    if (isOverridden) {
+      return true;
+    }
+
+    const studentMarks = marksByRosterId.get(student.id) ?? new Set<number>();
+    const hasMissedCompulsory = requiredCheckpointIds.some((reqId) => !studentMarks.has(reqId));
+    return !hasMissedCompulsory;
   });
 
   const eventSlots = Array.isArray(event.od_slots) ? (event.od_slots as string[]) : [];

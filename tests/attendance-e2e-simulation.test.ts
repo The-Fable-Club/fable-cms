@@ -211,6 +211,34 @@ describe("Staff Attendance & University OD Workflow Simulation", () => {
     const eval3 = evaluateEligibility(students[2]);
     expect(eval3.eligible).toBe(true);
     expect(eval3.isOverridden).toBe(true);
+
+    // Case 4: When only non-compulsory checkpoints exist (needed_for_od: false),
+    // all students (e.g. 24BCE4321) are eligible by default even with 0 marks
+    const nonCompulsoryCheckpoints = [
+      { id: 10, title: "Optional Checkin", needed_for_od: false },
+    ];
+    const nonCompulsoryRequiredIds = nonCompulsoryCheckpoints
+      .filter((c) => c.needed_for_od)
+      .map((c) => c.id);
+
+    const student24BCE4321: StudentState = {
+      id: 4,
+      reg_no: "24BCE4321",
+      od_slots: ["slot_1", "slot_2"],
+      od_override: false,
+      marks: [], // Not marked present at optional checkpoint
+    };
+
+    const hasMissedCompulsory = nonCompulsoryRequiredIds.some(
+      (reqId) => !student24BCE4321.marks.includes(reqId)
+    );
+    expect(hasMissedCompulsory).toBe(false);
+    expect(student24BCE4321.od_override || !hasMissedCompulsory).toBe(true);
+
+    // Case 5: Non-VIT students are excluded from official OD list
+    expect(VIT_REG_NO_REGEX.test("24BCE4321")).toBe(true);
+    expect(VIT_REG_NO_REGEX.test("RA2111003010123")).toBe(false); // Non-VIT excluded
+    expect(VIT_REG_NO_REGEX.test("CS2024-9901")).toBe(false); // Non-VIT excluded
   });
 
   it("5. Generates official OD Excel file from eligible students", async () => {
