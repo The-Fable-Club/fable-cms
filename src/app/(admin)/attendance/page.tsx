@@ -6,7 +6,7 @@ import { EventSelector } from "@/components/attendance/event-selector";
 import { RosterUploadForm } from "@/components/attendance/roster-upload-form";
 import { OnSpotForm } from "@/components/attendance/onspot-form";
 import { AttendanceManager, type CheckpointWithMarks } from "@/components/attendance/attendance-manager";
-import { OdOverrideButton } from "@/components/attendance/od-override-button";
+import { RosterTable } from "@/components/attendance/roster-table";
 
 export const metadata = { title: "Attendance & OD Management" };
 
@@ -16,19 +16,6 @@ const card = "border-2 border-ink p-4 bg-paper";
 type PageProps = {
   searchParams: Promise<{ event?: string }>;
 };
-
-function formatShortTime(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
 
 export default async function AttendancePage({ searchParams }: PageProps) {
   const me = await requireCan("read_signups");
@@ -216,126 +203,12 @@ export default async function AttendancePage({ searchParams }: PageProps) {
           <span className="font-mono text-xs uppercase text-ink/50">Top entries with checkpoint marks</span>
         </div>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b-2 border-ink font-mono text-xs uppercase tracking-widest text-ink/60">
-              <tr>
-                <th className="py-2.5">Reg No</th>
-                <th>Name</th>
-                <th>College</th>
-                <th>Dept / Year</th>
-                {rawCheckpoints.map((c) => (
-                  <th key={c.id} className="text-center whitespace-nowrap px-2">
-                    {c.title}
-                    {c.needed_for_od && <span className="text-clay-deep ml-1">*</span>}
-                  </th>
-                ))}
-                <th className="text-center">OD Status</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/20">
-              {rosterSample.length === 0 ? (
-                <tr>
-                  <td colSpan={6 + rawCheckpoints.length} className="py-6 text-center text-ink/40">
-                    No attendees registered yet. Import a spreadsheet or add on-spot above.
-                  </td>
-                </tr>
-              ) : (
-                rosterSample.map((r) => {
-                  const studentMarks = studentMarksMap[r.id] || {};
-                  const missedRequired = rawCheckpoints.filter(
-                    (c) => c.needed_for_od && !studentMarks[c.id]
-                  );
-                  const satisfiedAllRequired = rawCheckpoints.some((c) => c.needed_for_od)
-                    ? missedRequired.length === 0
-                    : Object.keys(studentMarks).length > 0;
-                  const isOverridden = Boolean(r.od_override);
-                  const isEligible = isOverridden || satisfiedAllRequired;
-
-                  return (
-                    <tr key={r.id} className="hover:bg-paper-raised">
-                      <td className="py-2.5 font-mono font-medium">{r.reg_no}</td>
-                      <td>
-                        <span className="font-medium">{r.name}</span>
-                        {r.flagged && (
-                          <span className="ml-1.5 border border-clay-deep bg-clay-deep/10 px-1 py-0.2 font-mono text-[0.65rem] uppercase text-clay-deep">
-                            Missing
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-xs">
-                        {r.college && r.college.toLowerCase() !== "vit chennai" ? (
-                          <span className="font-semibold text-clay-deep">{r.college}</span>
-                        ) : (
-                          <span className="text-ink/60">{r.college || "VIT Chennai"}</span>
-                        )}
-                      </td>
-                      <td className="text-xs text-ink/70">
-                        {[r.department, r.year].filter(Boolean).join(" · ") || "–"}
-                      </td>
-
-                      {/* Dynamic Checkpoint Attendance Columns */}
-                      {rawCheckpoints.map((c) => {
-                        const markTime = studentMarks[c.id];
-                        return (
-                          <td key={c.id} className="text-center font-mono text-xs whitespace-nowrap px-2">
-                            {markTime ? (
-                              <span
-                                className="font-semibold text-ink"
-                                title={`Marked at ${formatShortTime(markTime)}`}
-                              >
-                                ✓ {formatShortTime(markTime)}
-                              </span>
-                            ) : (
-                              <span className="text-ink/30">–</span>
-                            )}
-                          </td>
-                        );
-                      })}
-
-                      {/* OD Eligibility Status */}
-                      <td className="text-center whitespace-nowrap">
-                        {isOverridden ? (
-                          <span
-                            title={r.od_override_reason || "Manually included by staff"}
-                            className="border border-clay-deep bg-clay/20 px-2 py-0.5 font-mono text-xs font-semibold uppercase text-clay-deep cursor-help"
-                          >
-                            Overridden
-                          </span>
-                        ) : isEligible ? (
-                          <span className="border border-ink bg-paper-raised px-2 py-0.5 font-mono text-xs font-semibold uppercase text-ink">
-                            Eligible
-                          </span>
-                        ) : (
-                          <span
-                            title={
-                              missedRequired.length > 0
-                                ? `Missed: ${missedRequired.map((c) => c.title).join(", ")}`
-                                : "Ineligible"
-                            }
-                            className="border border-ink/30 bg-paper px-2 py-0.5 font-mono text-xs uppercase text-ink/50 cursor-help"
-                          >
-                            Ineligible
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Override Action */}
-                      <td className="text-right whitespace-nowrap">
-                        {manage && (
-                          <OdOverrideButton
-                            rosterId={r.id}
-                            isOverridden={isOverridden}
-                            studentName={r.name}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+          <RosterTable
+            roster={rosterSample}
+            studentMarksMap={studentMarksMap}
+            checkpoints={rawCheckpoints}
+            manage={manage}
+          />
         </div>
       </section>
     </div>
