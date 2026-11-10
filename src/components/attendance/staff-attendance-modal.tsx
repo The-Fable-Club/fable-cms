@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  searchRosterAction,
+  getEventRosterAction,
   staffRecordAttendanceAction,
   type SearchStudentResult,
 } from "@/app/(admin)/attendance/actions";
@@ -32,11 +32,11 @@ export function StaffAttendanceModal({
   const [selectedCheckpointId, setSelectedCheckpointId] = useState<number | undefined>(
     checkpoints[0]?.id
   );
+  const [roster, setRoster] = useState<SearchStudentResult[]>([]);
+  const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchStudentResult[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<SearchStudentResult | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [recentVerified, setRecentVerified] = useState<VerifiedEntry[]>([]);
   const [lastStatus, setLastStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -77,33 +77,37 @@ export function StaffAttendanceModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Debounced search
+  // Load the full event roster once on modal open for instant, offline-resilient searching
   useEffect(() => {
-    const clean = query.trim();
-    if (!clean || selectedStudent) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      setIsSearching(false);
-      return;
-    }
+    let active = true;
+    getEventRosterAction(eventId)
+      .then((data) => {
+        if (active) {
+          setRoster(data);
+          setIsLoadingRoster(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load event roster:", err);
+        if (active) setIsLoadingRoster(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [eventId]);
 
-    setShowDropdown(true);
-    setIsSearching(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const results = await searchRosterAction(eventId, clean);
-        setSearchResults(results);
-      } catch (err) {
-        console.error("Search failed:", err);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 150);
-
-    return () => clearTimeout(timer);
-  }, [query, eventId, selectedStudent]);
+  // Pure in-memory filtering: instant response at the door with zero network calls per keystroke
+  const clean = query.trim().toLowerCase();
+  const searchResults = useMemo(() => {
+    if (!clean || selectedStudent) return [];
+    return roster
+      .filter(
+        (s) =>
+          s.reg_no.toLowerCase().includes(clean) ||
+          s.name.toLowerCase().includes(clean)
+      )
+      .slice(0, 15);
+  }, [roster, clean, selectedStudent]);
 
   // Determine which OD slots apply to this event, falling back to all 6 if unconfigured
   const normalizedEventSlots = (eventOdSlots ?? [])
@@ -136,7 +140,6 @@ export function StaffAttendanceModal({
   function handleClearSelection() {
     setSelectedStudent(null);
     setQuery("");
-    setSearchResults([]);
     setShowDropdown(false);
     setSelectedSlots([]);
     searchInputRef.current?.focus();
@@ -186,10 +189,18 @@ export function StaffAttendanceModal({
           ...prev,
         ]);
 
+        // Optimistically update local roster cache with new OD slots
+        setRoster((prev) =>
+          prev.map((s) =>
+            s.id === selectedStudent.id ? { ...s, od_slots: selectedSlots } : s
+          )
+        );
+        // Background refresh to keep in sync with server
+        getEventRosterAction(eventId).then(setRoster).catch(() => {});
+
         // Reset for next entry
         setSelectedStudent(null);
         setQuery("");
-        setSearchResults([]);
         setShowDropdown(false);
         setSelectedSlots([]);
         searchInputRef.current?.focus();
@@ -251,9 +262,13 @@ export function StaffAttendanceModal({
                 ref={searchInputRef}
                 value={query}
                 onChange={(e) => {
-                  setQuery(e.target.value);
+                  const val = e.target.value;
+                  setQuery(val);
                   if (selectedStudent) {
                     setSelectedStudent(null);
+                  }
+                  if (val.trim()) {
+                    setShowDropdown(true);
                   }
                 }}
                 onFocus={() => {
@@ -292,10 +307,10 @@ export function StaffAttendanceModal({
               ref={dropdownRef}
               className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto border-2 border-ink bg-paper shadow-2xl"
             >
-              {isSearching ? (
+              {isLoadingRoster ? (
                 <div className="p-3 text-sm font-mono text-ink/60 flex items-center gap-2">
                   <span className="inline-block h-3 w-3 animate-spin border-2 border-ink border-t-transparent" />
-                  Searching roster for &ldquo;{query}&rdquo;…
+                  Loading event roster…
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="p-4 text-sm text-ink/60">

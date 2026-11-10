@@ -101,7 +101,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   const chkIds = rawCheckpoints.map((c) => c.id);
 
   // 3. Fetch marks counts for checkpoints and per-student marks mapping
-  let marksMap: Record<number, number> = {};
+  const marksMap: Record<number, number> = {};
   const studentMarksMap: Record<number, Record<number, string>> = {};
   let staffRecordedCount = 0;
 

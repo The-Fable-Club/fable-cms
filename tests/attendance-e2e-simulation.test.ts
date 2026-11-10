@@ -11,7 +11,7 @@ import {
 } from "../src/lib/od-excel-generator";
 
 describe("Staff Attendance & University OD Workflow Simulation", () => {
-  const sampleOdsPath = join(process.cwd(), "..", "Event_Details.ods");
+  const sampleOdsPath = join(__dirname, "fixtures", "sample-roster.ods");
   const odsBuffer = readFileSync(sampleOdsPath);
 
   it("1. Imports roster from EventHub spreadsheet correctly", () => {

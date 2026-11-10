@@ -47,7 +47,7 @@ export function AttendanceManager({
   manage?: boolean;
 }) {
   const router = useRouter();
-  const [editingCheckpoint, setEditingCheckpoint] = useState<CheckpointItem | null>(null);
+  const [editingCheckpoint, setEditingCheckpoint] = useState<CheckpointWithMarks | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
 

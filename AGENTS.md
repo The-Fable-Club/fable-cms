@@ -19,7 +19,7 @@ The admin app for The Fable Club (a student club at VIT Chennai): editors sign i
 ## Map
 | Path | What |
 |---|---|
-| `src/app/(admin)/*` | The screens: dashboard, events, members, applications, registrations, questions, attendance (layout only), releases, admins (People) |
+| `src/app/(admin)/*` | The screens: dashboard, events, members, applications, registrations, questions, attendance (roster, checkpoints, staff portal, OD Excel export), releases, admins (People) |
 | `src/app/api/health` | Public liveness check |
 | `src/app/api/hooks/new-application` | Called by the database (migration 0010) to email the club; checks `APPLICATION_HOOK_SECRET` |
 | `src/app/api/imagekit/auth` | 2-minute ImageKit upload signature + fixed folder, creators and up |

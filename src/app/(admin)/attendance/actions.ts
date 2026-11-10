@@ -248,18 +248,63 @@ export async function deleteCheckpointAction(checkpointId: number): Promise<Acti
   return { ok: true, message: "Checkpoint removed." };
 }
 
+/** Fetch full event roster once for fast, offline-tolerant browser search. */
+export async function getEventRosterAction(eventId: number): Promise<SearchStudentResult[]> {
+  await requireCan("read_signups");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("attendance_roster")
+    .select("id, reg_no, name, department, year, college, od_slots")
+    .eq("event_id", eventId)
+    .order("reg_no", { ascending: true });
+
+  if (error) {
+    console.error("getEventRosterAction error:", error.message);
+    const fallback = await supabase
+      .from("attendance_roster")
+      .select("id, reg_no, name, department, year, college")
+      .eq("event_id", eventId)
+      .order("reg_no", { ascending: true });
+
+    if (fallback.data) {
+      return fallback.data.map((d) => ({
+        id: d.id,
+        reg_no: d.reg_no,
+        name: d.name,
+        department: d.department,
+        year: d.year,
+        college: d.college,
+        od_slots: [],
+      }));
+    }
+    return [];
+  }
+
+  return (data ?? []).map((d) => ({
+    id: d.id,
+    reg_no: d.reg_no,
+    name: d.name,
+    department: d.department,
+    year: d.year,
+    college: d.college,
+    od_slots: Array.isArray(d.od_slots) ? (d.od_slots as string[]) : [],
+  }));
+}
+
 /** Search roster for typeahead autocomplete matching reg_no or name. */
 export async function searchRosterAction(eventId: number, query: string): Promise<SearchStudentResult[]> {
   await requireCan("read_signups");
   const clean = query.trim();
-  if (!clean || clean.length < 1) return [];
+  // Strip characters that alter PostgREST filter syntax or break pattern matching
+  const sanitized = clean.replace(/[,()\\%_]/g, "").trim();
+  if (!sanitized || sanitized.length < 1) return [];
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("attendance_roster")
     .select("id, reg_no, name, department, year, college, od_slots")
     .eq("event_id", eventId)
-    .or(`reg_no.ilike.%${clean}%,name.ilike.%${clean}%`)
+    .or(`reg_no.ilike.%${sanitized}%,name.ilike.%${sanitized}%`)
     .limit(15);
 
   if (error) {
@@ -269,7 +314,7 @@ export async function searchRosterAction(eventId: number, query: string): Promis
       .from("attendance_roster")
       .select("id, reg_no, name, department, year, college")
       .eq("event_id", eventId)
-      .or(`reg_no.ilike.%${clean}%,name.ilike.%${clean}%`)
+      .or(`reg_no.ilike.%${sanitized}%,name.ilike.%${sanitized}%`)
       .limit(15);
 
     if (fallback.data) {

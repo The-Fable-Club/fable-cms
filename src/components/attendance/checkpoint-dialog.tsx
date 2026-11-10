@@ -9,6 +9,7 @@ export type CheckpointItem = {
   opens_at: string;
   closes_at: string;
   needed_for_od: boolean;
+  marks_count?: number;
 };
 
 // Formats an ISO string (e.g. 2026-10-22T09:30:00+05:30) for <input type="datetime-local" />
@@ -49,6 +50,7 @@ export function CheckpointDialog({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const defaultOpens = checkpoint ? toDatetimeLocal(checkpoint.opens_at) : "";
   const defaultCloses = checkpoint ? toDatetimeLocal(checkpoint.closes_at) : "";
@@ -68,15 +70,16 @@ export function CheckpointDialog({
     });
   }
 
-  function handleDelete() {
+  function handleExecuteDelete() {
     if (!checkpoint) return;
-    if (!confirm(`Delete checkpoint "${checkpoint.title}"? Any existing marks for it will be removed.`)) return;
+    setError(null);
     startTransition(async () => {
       const res = await deleteCheckpointAction(checkpoint.id);
       if (res.ok) {
         onClose();
       } else {
         setError(res.message);
+        setConfirmingDelete(false);
       }
     });
   }
@@ -168,35 +171,64 @@ export function CheckpointDialog({
             </p>
           )}
 
-          <div className="flex items-center justify-between pt-2">
-            {checkpoint ? (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isPending}
-                className="border-2 border-clay-deep px-3 py-1.5 font-mono text-xs uppercase text-clay-deep hover:bg-clay-deep hover:text-paper"
-              >
-                Delete
-              </button>
-            ) : <span />}
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="border-2 border-ink px-4 py-1.5 text-sm hover:bg-paper-raised"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isPending}
-                className="border-2 border-ink bg-ink px-5 py-1.5 text-sm font-medium text-paper hover:bg-clay-deep disabled:opacity-50"
-              >
-                {isPending ? "Saving…" : "Save Checkpoint"}
-              </button>
+          {checkpoint && confirmingDelete ? (
+            <div className="border-2 border-clay-deep bg-paper p-3.5 space-y-2">
+              <p className="text-sm font-semibold text-clay-deep">
+                Delete checkpoint &ldquo;{checkpoint.title}&rdquo; and its {checkpoint.marks_count ?? 0} mark{(checkpoint.marks_count ?? 0) === 1 ? "" : "s"}?
+              </p>
+              <p className="text-xs text-ink/70">
+                This removes the checkpoint for good and permanently cascades to delete all its recorded attendance marks.
+              </p>
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setConfirmingDelete(false)}
+                  className="border-2 border-ink px-3 py-1 font-mono text-xs uppercase hover:bg-paper-raised"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={handleExecuteDelete}
+                  className="border-2 border-clay-deep bg-clay-deep px-3 py-1 font-mono text-xs uppercase text-paper hover:bg-ink disabled:opacity-50"
+                >
+                  {isPending ? "Deleting…" : "Yes, Delete Checkpoint"}
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between pt-2">
+              {checkpoint ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={isPending}
+                  className="border-2 border-clay-deep px-3 py-1.5 font-mono text-xs uppercase text-clay-deep hover:bg-clay-deep hover:text-paper"
+                >
+                  Delete
+                </button>
+              ) : <span />}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="border-2 border-ink px-4 py-1.5 text-sm hover:bg-paper-raised"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="border-2 border-ink bg-ink px-5 py-1.5 text-sm font-medium text-paper hover:bg-clay-deep disabled:opacity-50"
+                >
+                  {isPending ? "Saving…" : "Save Checkpoint"}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>
