@@ -133,7 +133,7 @@ describe("generateOdExcelWorkbook", () => {
 
     // Read back and verify sheet anatomy
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer as any);
+    await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const ws = wb.getWorksheet(1);
     expect(ws).toBeDefined();
 
@@ -146,7 +146,7 @@ describe("generateOdExcelWorkbook", () => {
     // Check Row 4 yellow header styles
     const a4 = ws!.getCell("A4");
     expect(a4.value).toBe("SL.NO");
-    const a4Fill = a4.fill as any;
+    const a4Fill = a4.fill as ExcelJS.FillPattern;
     expect(a4Fill.type).toBe("pattern");
     expect(a4Fill.pattern).toBe("solid");
     expect(a4Fill.fgColor?.argb).toBe("FFFFFF00");

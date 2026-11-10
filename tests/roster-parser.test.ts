@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import { parseRosterFile, REG_NO_REGEX } from "@/lib/roster-parser";
 
-describe("parseRosterFile with Event_Details.ods", () => {
-  const odsPath = resolve(process.cwd(), "../Event_Details.ods");
+describe("parseRosterFile with sample-roster.ods", () => {
+  const odsPath = resolve(__dirname, "fixtures/sample-roster.ods");
 
-  it("successfully parses the real Event_Details.ods file", () => {
+  it("successfully parses the sample-roster.ods fixture", () => {
     const buffer = readFileSync(odsPath);
     const result = parseRosterFile(buffer);
 
