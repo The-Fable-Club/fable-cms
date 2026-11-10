@@ -41,6 +41,17 @@ EventHub is the official registration, so the list of people who may get OD come
 - **Attendance marks** (above) are then taken against the roster.
 - **Needed before building:** a sample of the EventHub CSV (column headers, with fake rows) and the format the university wants for OD, so the import and the export match them exactly.
 
+## Who goes on the official OD list (decided 2026-11-11, fable-cms#33)
+
+The official OD Excel (`/export/od-excel/[eventId]`) starts from **everyone on the event's roster** and only takes people off:
+
+- **In by default:** the expectation is that most people who registered get OD, so staff only act on the exceptions.
+- **Removed:** anyone who missed one or more checkpoints marked "needed for OD".
+- **Override:** a manual OD override (admins only, logged) puts someone back on regardless.
+- **VIT Chennai only:** registration numbers that aren't VIT Chennai's format are left out of the official file. They still appear in the internal audit CSV.
+
+**Known consequence:** if an event has **no** checkpoint marked "needed for OD", nobody is removed, so everyone on the roster gets OD, including people who never turned up. To avoid that, mark at least one checkpoint "needed for OD". Before #33 the rule required at least one recorded mark; that was deliberately changed. Revisit it if it causes trouble.
+
 ## Open questions for the club
 - Which checkpoints count for OD, and does missing one cancel OD or reduce it?
 - Will volunteers be available at the door for an ID check?
