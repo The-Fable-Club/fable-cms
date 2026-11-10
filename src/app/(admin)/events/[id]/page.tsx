@@ -16,7 +16,7 @@ export default async function EditEvent({ params }: { params: Promise<{ id: stri
   const supabase = await createClient();
   const { data } = await supabase.from("events").select("*").eq("id", num).maybeSingle();
   if (!data) notFound();
-  const { id: _id, ...event } = data as EventRow;
+  const event = data as EventRow;
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Edit event</h1>

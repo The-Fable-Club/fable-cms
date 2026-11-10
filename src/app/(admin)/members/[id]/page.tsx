@@ -15,7 +15,7 @@ export default async function EditMember({ params }: { params: Promise<{ id: str
   const supabase = await createClient();
   const { data } = await supabase.from("members").select("*").eq("id", num).maybeSingle();
   if (!data) notFound();
-  const { id: _id, ...member } = data as MemberRow;
+  const member = data as MemberRow;
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Edit member</h1>
